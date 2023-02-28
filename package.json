@@ -1,0 +1,23 @@
+{
+  "name": "@jotforminc/zenith",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "bin": {
+    "zenith": "./index.js"
+  },
+  "devDependencies": {
+    "commander": "10.0.0",
+    "rollup": "2.75.6",
+    "unzipper": "0.10.11",
+    "uuid": "8.3.2",
+    "workerpool": "6.3.1",
+    "zip-local": "0.3.5"
+  },
+  "scripts": {
+    "build": "heyyoo build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
