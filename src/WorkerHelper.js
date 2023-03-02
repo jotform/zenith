@@ -7,7 +7,7 @@ class WorkerHelper {
   started = new Set();
 
   constructor() {
-    this.pool = workerpool.pool(__dirname + '/worker.js', { maxWorkers: 6, workerType: 'thread' });
+    this.pool = workerpool.pool(__dirname + '/Worker.js', { maxWorkers: 6, workerType: 'thread' });
     const workspace = readFileSync(path.join(__dirname, '../workspace.json'), { encoding: 'utf-8' });
     this.workspaceJSON = JSON.parse(workspace || '').projects;
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;

@@ -1,7 +1,7 @@
 const { createHash } = require('crypto');
 const { readdirSync, readFileSync, writeFileSync, existsSync, appendFileSync } = require('fs');
 const path = require('path');
-const { ROOT_PATH } = require('./utils/constants');
+const { ROOT_PATH } = require('./utils/Constants');
 
 class Hasher {
   hashJSON = {};

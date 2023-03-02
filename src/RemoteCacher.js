@@ -1,6 +1,6 @@
 const { existsSync, mkdirSync, rmSync } = require('fs');
 const path = require('path');
-const { ROOT_PATH } = require('./utils/constants');
+const { ROOT_PATH } = require('./utils/Constants');
 const { S3 } = require('@aws-sdk/client-s3');
 let zipper = require('zip-local');
 const unzipper = require('unzipper');
