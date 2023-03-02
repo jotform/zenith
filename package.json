@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "description": "",
   "type": "module",
-  "main": "./src/index.js",
+  "files": ["bin"],
+  "main": "./build/index.js",
   "bin": {
-    "zenith": "./src/index.js"
+    "zenith": "./build/index.js"
   },
   "devDependencies": {
     "commander": "10.0.0",
@@ -20,10 +21,9 @@
     "zip-local": "0.3.5"
   },
   "scripts": {
-    "start": "node --experimental-modules --es-module-specifier-resolution=node src/index.js",
     "lint": "eslint",
     "test": "true",
-    "build": "rollup src/index.js -f cjs"
+    "build": "rollup -c"
   },
   "keywords": [],
   "author": "",

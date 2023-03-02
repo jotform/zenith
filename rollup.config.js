@@ -1,7 +1,7 @@
 export default {
-  input: require('path').join(__dirname, 'src/index.js'),
+  input: 'src/index.js',
   output: {
-    file: 'build/index.js',
+    file: 'bin/index.js',
     format: 'cjs'
   }
 }
