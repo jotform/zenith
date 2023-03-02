@@ -1,7 +1,7 @@
 const { cpSync, existsSync, mkdirSync } = require('fs');
 const path = require('path');
 const ConfigHelper = require('./ConfigHelper');
-const { ROOT_PATH } = require('./src/utils/constants');
+const { ROOT_PATH } = require('./utils/constants');
 const RemoteCacher = require('./RemoteCacher');
 const LocalCacher = require('./LocalCacher');
 

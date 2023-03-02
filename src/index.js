@@ -1,4 +1,4 @@
-const Runner = require('./Runner');
+import Runner from './Runner';
 
 const run = async () => {
   try {

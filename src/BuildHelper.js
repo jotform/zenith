@@ -1,6 +1,6 @@
 const { existsSync, readFileSync, rmSync } = require('fs');
 const path = require('path');
-const { ROOT_PATH } = require('./src/utils/constants');
+const { ROOT_PATH } = require('./utils/constants');
 const Cacher = require('./Cacher');
 const Hasher = require('./Hasher');
 const WorkerHelper = require('./WorkerHelper');

@@ -1,7 +1,7 @@
 const { readFileSync } = require('fs');
 const path = require('path');
-const { ROOT_PATH } = require('./src/utils/constants');
-const { readFileAsJSON } = require('./src/utils/functions');
+const { ROOT_PATH } = require('./utils/constants');
+const { readFileAsJSON } = require('./utils/functions');
 
 class ConfigHelper {
   constructor() {
