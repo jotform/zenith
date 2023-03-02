@@ -1,11 +1,11 @@
-const { cpSync, existsSync, mkdirSync } = require('fs');
-const path = require('path');
-const ConfigHelper = require('./ConfigHelper');
-const { ROOT_PATH } = require('./utils/Constants');
-const RemoteCacher = require('./RemoteCacher');
-const LocalCacher = require('./LocalCacher');
+import { cpSync, existsSync, mkdirSync } from 'fs';
+import path from 'path';
+import ConfigHelper from './ConfigHelper';
+import ROOT_PATH from './utils/Constants';
+import RemoteCacher from './RemoteCacher';
+import LocalCacher from './LocalCacher';
 
-class Cacher {
+export default class Cacher {
   constructor() {
     const isRemoteCache = process.env.USE_REMOTE_CACHE;
     if (isRemoteCache) {
@@ -15,5 +15,3 @@ class Cacher {
     }
   }
 }
-
-module.exports = Cacher;

@@ -1,9 +1,9 @@
-const { cpSync, existsSync, mkdirSync } = require('fs');
-const path = require('path');
-const ConfigHelper = require('./ConfigHelper');
-const { ROOT_PATH } = require('./utils/Constants');
+import { cpSync, existsSync, mkdirSync } from 'fs';
+import path from 'path';
+import ConfigHelper from './ConfigHelper';
+import ROOT_PATH from './utils/Constants';
 
-class LocalCacher {
+export default class LocalCacher {
   static cachePath = path.join(ROOT_PATH, ConfigHelper.getConfig('cachePath', ''));
 
   static isCached(hash) {
@@ -37,5 +37,3 @@ class LocalCacher {
     }
   }
 }
-
-module.exports = LocalCacher;

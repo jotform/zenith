@@ -1,5 +1,5 @@
-const { program } = require('commander');
-const BuildHelper = require('./BuildHelper');
+import { program } from 'commander';
+import BuildHelper from './BuildHelper';
 
 program
   .option('-p, --project <project>', 'Project name')

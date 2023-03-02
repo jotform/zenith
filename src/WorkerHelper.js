@@ -1,9 +1,9 @@
-const workerpool = require('workerpool');
-const { readFileSync } = require('fs');
-const path = require('path');
-const ConfigHelper = require('./ConfigHelper');
+import workerpool from 'workerpool';
+import { readFileSync } from 'fs';
+import path from 'path';
+import ConfigHelper from './ConfigHelper';
 
-class WorkerHelper {
+export default class WorkerHelper {
   started = new Set();
 
   constructor() {
@@ -33,5 +33,3 @@ class WorkerHelper {
     }
   }
 }
-
-module.exports = WorkerHelper;

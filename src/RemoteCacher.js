@@ -1,12 +1,11 @@
-const { existsSync, mkdirSync, rmSync } = require('fs');
-const path = require('path');
-const { ROOT_PATH } = require('./utils/Constants');
-const { S3 } = require('@aws-sdk/client-s3');
-let zipper = require('zip-local');
-const unzipper = require('unzipper');
-const Hasher = require('./Hasher');
-
-class RemoteCacher {
+import { existsSync, mkdirSync, rmSync } from 'fs';
+import path from 'path';
+import ROOT_PATH from './utils/Constants';
+import { S3 } from '@aws-sdk/client-s3';
+import zipper from 'zip-local';
+import unzipper from 'unzipper';
+import Hasher from './Hasher';
+export default class RemoteCacher {
   cachedList = new Set();
   constructor() {
     this.s3Client = new S3({
@@ -164,5 +163,3 @@ class RemoteCacher {
     // });
   }
 }
-
-module.exports = new RemoteCacher();

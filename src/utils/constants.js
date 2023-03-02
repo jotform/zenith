@@ -1,4 +1,3 @@
-const path = require('path');
-const ROOT_PATH = path.join(__dirname, '../../');
+import path from 'path';
 
-module.exports = { ROOT_PATH };
+export default ROOT_PATH = path.join(__dirname, '../../');
