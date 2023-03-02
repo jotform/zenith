@@ -3,7 +3,6 @@
   "packageManager": "pnpm@7.18.0",
   "version": "0.1.4",
   "description": "",
-  "type": "module",
   "main": "./build/index.js",
   "files": [
     "/build"
@@ -25,7 +24,7 @@
   "scripts": {
     "lint": "eslint",
     "test": "true",
-    "build": "rollup -c"
+    "build": "rollup -c --bundleConfigAsCjs"
   },
   "keywords": [],
   "author": "",
