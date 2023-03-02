@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, rmSync } from 'fs';
-import * as path from 'path';;
-import ROOT_PATH from './utils/Constants';
+import * as path from 'path';
 import { S3 } from '@aws-sdk/client-s3';
 import zipper from 'zip-local';
 import unzipper from 'unzipper';
+import { ROOT_PATH } from '../utils/constants';
 import Hasher from './Hasher';
-export default class RemoteCacher {
+
+class RemoteCacher {
   cachedList = new Set();
   constructor() {
     this.s3Client = new S3({
@@ -163,3 +164,6 @@ export default class RemoteCacher {
     // });
   }
 }
+
+const RemoteCacherInstance = new RemoteCacher();
+export default RemoteCacherInstance;

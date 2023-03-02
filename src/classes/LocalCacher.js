@@ -1,23 +1,23 @@
-import * as fs from 'fs';
-import * as path from 'path';;
+import { cpSync, existsSync, mkdirSync } from 'fs';
+import * as path from 'path';
 import ConfigHelper from './ConfigHelper';
-import ROOT_PATH from './utils/Constants';
+import { ROOT_PATH } from '../utils/constants';
 
 export default class LocalCacher {
   static cachePath = path.join(ROOT_PATH, ConfigHelper.getConfig('cachePath', ''));
 
   static isCached(hash) {
     const cachePath = path.join(this.cachePath, hash);
-    return fs.existsSync(cachePath);
+    return existsSync(cachePath);
   }
 
   static cache(hash, root, output) {
     try {
       const hashedPath = path.join(this.cachePath, hash, root, output);
       const inputPath = path.join(root, output);
-      if (fs.existsSync(inputPath)) {
-        fs.mkdirSync(hashedPath, { recursive: true });
-        fs.cpSync(inputPath, hashedPath, { recursive: true });
+      if (existsSync(inputPath)) {
+        mkdirSync(hashedPath, { recursive: true });
+        cpSync(inputPath, hashedPath, { recursive: true });
       }
     } catch (error) {
       console.log(error);
@@ -28,9 +28,9 @@ export default class LocalCacher {
     try {
       const hashedPath = path.join(this.cachePath, hash, root, output);
       const inputPath = path.join(root, output);
-      if (fs.existsSync(hashedPath)) {
-        fs.mkdirSync(inputPath, { recursive: true });
-        fs.cpSync(hashedPath, inputPath, { recursive: true });
+      if (existsSync(hashedPath)) {
+        mkdirSync(inputPath, { recursive: true });
+        cpSync(hashedPath, inputPath, { recursive: true });
       }
     } catch (error) {
       console.log(error);

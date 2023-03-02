@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, rmSync } from 'fs';
-import * as path from 'path';;
-import ROOT_PATH from './utils/Constants';
+const { readFileSync } = require('fs');
+import * as path from 'path';
+import { ROOT_PATH } from '../utils/constants';
 import Cacher from './Cacher';
 import Hasher from './Hasher';
 import WorkerHelper from './WorkerHelper';

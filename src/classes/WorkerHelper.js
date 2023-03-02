@@ -1,6 +1,6 @@
 import workerpool from 'workerpool';
 import { readFileSync } from 'fs';
-import * as path from 'path';;
+import * as path from 'path';
 import ConfigHelper from './ConfigHelper';
 
 export default class WorkerHelper {
