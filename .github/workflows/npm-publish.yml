@@ -18,6 +18,7 @@ jobs:
       - run: yarn
       - run: yarn lint
       - run: yarn test
+      - run: yarn build
 
   publish-npm:
     needs: build
