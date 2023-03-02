@@ -1,13 +1,13 @@
 {
   "name": "@jotforminc/zenith",
   "packageManager": "pnpm@7.18.0",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "type": "module",
   "files": ["bin"],
-  "main": "./build/index.js",
+  "main": "./bin/index.js",
   "bin": {
-    "zenith": "./build/index.js"
+    "zenith": "./bin/index.js"
   },
   "devDependencies": {
     "commander": "10.0.0",
