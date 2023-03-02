@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'fs';
-import path from 'path';
+import * as path from 'path';;
 
 const update = () => {
   const { projects } = JSON.parse(readFileSync(path.join(__dirname, '../workspace.json'), { encoding: 'utf-8' }));

@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, rmSync } from 'fs';
-import path from 'path';
+import * as path from 'path';;
 import ROOT_PATH from './utils/Constants';
 import { S3 } from '@aws-sdk/client-s3';
 import zipper from 'zip-local';

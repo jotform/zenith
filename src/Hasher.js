@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { readdirSync, readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
-import path from 'path';
+import * as path from 'path';;
 import ROOT_PATH from './utils/Constants';
 
 export default class Hasher {

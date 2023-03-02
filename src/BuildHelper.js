@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, rmSync } from 'fs';
-import path from 'path';
+import * as path from 'path';;
 import ROOT_PATH from './utils/Constants';
 import Cacher from './Cacher';
 import Hasher from './Hasher';
