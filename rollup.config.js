@@ -1,7 +1,7 @@
 export default {
   input: 'src/index.js',
   output: {
-    file: 'bin/index.js',
+    file: 'build/index.js',
     format: 'cjs'
   }
 }
