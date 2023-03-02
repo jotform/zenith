@@ -1,5 +1,6 @@
-const { readFileSync, writeFileSync } = require('fs');
-const path = require('path');
+import { readFileSync, writeFileSync } from 'fs';
+import * as path from 'path';;
+
 const update = () => {
   const { projects } = JSON.parse(readFileSync(path.join(__dirname, '../workspace.json'), { encoding: 'utf-8' }));
   const projectsJSON = {};
@@ -7,7 +8,7 @@ const update = () => {
     const { root } = projects[key];
     projectsJSON[key] = root;
   }
-  writeFileSync(path.join(__dirname, 'projects.json'), JSON.stringify(projectsJSON));
+  writeFileSync(path.join(__dirname, 'Projects.json'), JSON.stringify(projectsJSON));
 }
 
 update();

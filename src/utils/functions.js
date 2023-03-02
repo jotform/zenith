@@ -1,4 +1,4 @@
-const { readFileSync, existsSync } = require('fs');
+import { readFileSync, existsSync } from 'fs';
 
 const readFileAsJSON = path => {
   if (existsSync(path)) {
@@ -6,5 +6,4 @@ const readFileAsJSON = path => {
   }
   return {};
 }
-
-module.exports = { readFileAsJSON };
+export default readFileAsJSON;

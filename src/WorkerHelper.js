@@ -1,13 +1,13 @@
-const workerpool = require('workerpool');
-const { readFileSync } = require('fs');
-const path = require('path');
-const ConfigHelper = require('./ConfigHelper');
+import workerpool from 'workerpool';
+import { readFileSync } from 'fs';
+import * as path from 'path';;
+import ConfigHelper from './ConfigHelper';
 
-class WorkerHelper {
+export default class WorkerHelper {
   started = new Set();
 
   constructor() {
-    this.pool = workerpool.pool(__dirname + '/worker.js', { maxWorkers: 6, workerType: 'thread' });
+    this.pool = workerpool.pool(__dirname + '/Worker.js', { maxWorkers: 6, workerType: 'thread' });
     const workspace = readFileSync(path.join(__dirname, '../workspace.json'), { encoding: 'utf-8' });
     this.workspaceJSON = JSON.parse(workspace || '').projects;
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
@@ -33,5 +33,3 @@ class WorkerHelper {
     }
   }
 }
-
-module.exports = WorkerHelper;

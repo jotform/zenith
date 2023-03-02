@@ -1,12 +1,12 @@
-const { existsSync, readFileSync, rmSync } = require('fs');
-const path = require('path');
-const { ROOT_PATH } = require('./utils/constants');
-const Cacher = require('./Cacher');
-const Hasher = require('./Hasher');
-const WorkerHelper = require('./WorkerHelper');
-const ConfigHelper = require('./ConfigHelper');
+import { existsSync, readFileSync, rmSync } from 'fs';
+import * as path from 'path';;
+import ROOT_PATH from './utils/Constants';
+import Cacher from './Cacher';
+import Hasher from './Hasher';
+import WorkerHelper from './WorkerHelper';
+import ConfigHelper from './ConfigHelper';
 
-class BuildHelper extends WorkerHelper {
+export default class BuildHelper extends WorkerHelper {
   projects = new Map();
   totalCount = 0;
   fromCache = 0;
@@ -155,5 +155,3 @@ class BuildHelper extends WorkerHelper {
     }
   }
 }
-
-module.exports = BuildHelper;

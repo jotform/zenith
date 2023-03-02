@@ -1,6 +1,6 @@
-const workerpool = require('workerpool');
-const { execSync } = require('child_process');
-const RemoteCacher = require('./RemoteCacher');
+import workerpool from 'workerpool';
+import { execSync } from 'child_process';
+import RemoteCacher from './RemoteCacher';
 
 const execute = async (buildPath, targetCommand, hash, root, outputs) => {
   try {

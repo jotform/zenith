@@ -1,5 +1,5 @@
-const { program } = require('commander');
-const BuildHelper = require('./BuildHelper');
+import { program } from 'commander';
+import BuildHelper from './BuildHelper';
 
 program
   .option('-p, --project <project>', 'Project name')
@@ -7,7 +7,7 @@ program
   .option('-d, --debug', 'Debug mode')
   .option('-c, --compareWith <compareWith>', 'Compare with')
 
-class Runner {
+export default class Runner {
   constructor(...args) {
     program
       .option('-p, --project <project>', 'Project name')
@@ -50,5 +50,3 @@ class Runner {
     Builder.build();
   }
 }
-
-export default Runner;

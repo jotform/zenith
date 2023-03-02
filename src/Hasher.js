@@ -1,9 +1,9 @@
-const { createHash } = require('crypto');
-const { readdirSync, readFileSync, writeFileSync, existsSync, appendFileSync } = require('fs');
-const path = require('path');
-const { ROOT_PATH } = require('./utils/constants');
+import { createHash } from 'crypto';
+import { readdirSync, readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
+import * as path from 'path';;
+import ROOT_PATH from './utils/Constants';
 
-class Hasher {
+export default class Hasher {
   hashJSON = {};
   // buildJSONPath = path.join(__dirname, '../build.json');
   changedHash = [];
@@ -77,5 +77,3 @@ class Hasher {
     // writeFileSync(this.buildJSONPath, JSON.stringify(this.hashJSON));
   }
 }
-
-module.exports = new Hasher();
