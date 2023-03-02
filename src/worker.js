@@ -1,6 +1,6 @@
 import workerpool from 'workerpool';
 import { execSync } from 'child_process';
-import RemoteCacher from './RemoteCacher';
+import RemoteCacher from './classes/RemoteCacher';
 
 const execute = async (buildPath, targetCommand, hash, root, outputs) => {
   try {

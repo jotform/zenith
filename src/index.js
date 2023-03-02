@@ -1,4 +1,4 @@
-import Runner from './Runner.js';
+import Runner from './classes/Runner.js';
 
 const run = async () => {
   try {

@@ -1,9 +1,8 @@
 import { createHash } from 'crypto';
-import { readdirSync, readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
-import * as path from 'path';;
-import ROOT_PATH from './utils/Constants';
+import { readdirSync, readFileSync, existsSync } from 'fs';
+import * as path from 'path';
 
-export default class Hasher {
+class Hasher {
   hashJSON = {};
   // buildJSONPath = path.join(__dirname, '../build.json');
   changedHash = [];
@@ -24,7 +23,7 @@ export default class Hasher {
 
   getHash(directoryPath, script, debug, compareWith) {
     const hasher = createHash('sha256');
-    if (script) hasher.update(script);
+    if (script) Hasher.update(script);
     const directory = readdirSync(directoryPath, { withFileTypes: true });
     const packageJSONPath = path.join(directoryPath, 'package.json')
     if (existsSync(packageJSONPath)) {
@@ -32,7 +31,7 @@ export default class Hasher {
       const dependencies = { ...(packageJSON.dependencies || {}), ...(packageJSON.devDependencies || {}) };
       Object.entries(dependencies).sort((a, b) => a[0] - b[0]).forEach(([key, value]) => {
         if (value === 'workspace:*' && this.hashJSON[key]) {
-          hasher.update(this.hashJSON[key]);
+          Hasher.update(this.hashJSON[key]);
         }
       });
     }
@@ -56,12 +55,12 @@ export default class Hasher {
           }
           this.debugJSON[itemPath] = debugHash;
         }
-        hasher.update(fileString);
+        Hasher.update(fileString);
       } else if (item.isDirectory()) {
-        hasher.update(this.getHash(itemPath, script, debug, compareWith));
+        Hasher.update(this.getHash(itemPath, script, debug, compareWith));
       }
     });
-    return hasher.digest('hex');
+    return Hasher.digest('hex');
   }
 
   getUpdatedHashes() {
@@ -77,3 +76,6 @@ export default class Hasher {
     // writeFileSync(this.buildJSONPath, JSON.stringify(this.hashJSON));
   }
 }
+
+const HasherInstance = new Hasher();
+export default HasherInstance;
