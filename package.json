@@ -4,10 +4,9 @@
   "version": "0.1.2",
   "description": "",
   "type": "module",
-  "files": ["bin"],
-  "main": "./bin/index.js",
+  "main": "./build/index.js",
   "bin": {
-    "zenith": "./bin/index.js"
+    "zenith": "./build/index.js"
   },
   "devDependencies": {
     "commander": "10.0.0",
