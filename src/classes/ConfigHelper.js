@@ -5,7 +5,7 @@ import { ROOT_PATH } from '../utils/constants';
 class ConfigHelper {
   constructor() {
     this.buildConfigJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, 'build.config.json'), { encoding: 'utf-8' }));
-    this.projects = JSON.parse(readFileSync(path.join(__dirname, 'Projects.json')));
+    this.projects = JSON.parse(readFileSync(path.join(ROOT_PATH, 'projects.json')));
   }
 
   getConfig(configName, root) {
