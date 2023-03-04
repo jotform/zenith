@@ -1,4 +1,4 @@
-const { readFileSync } = require('fs');
+import { readFileSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
 import Cacher from './Cacher';
@@ -29,13 +29,22 @@ export default class BuildHelper extends WorkerHelper {
 
   addProject(project) {
     if (!this.projects.has(project) && project && ConfigHelper.projects[project]) {
-      const root = ConfigHelper.projects[project] || {};
-      const packageJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, root, 'package.json'), { encoding: 'utf-8' }));
-      const dependencyArray = Object.keys({ ...packageJSON.dependencies, ...packageJSON.devDependencies });
-      this.projects.set(project, new Set(dependencyArray.filter(i => ConfigHelper.projects[i])));
-      dependencyArray.forEach(dependency => {
-        this.addProject(dependency);
-      });
+      try {
+        const root = ConfigHelper.projects[project] || {};
+        const packageJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, root, 'package.json'), { encoding: 'utf-8' }));
+        const dependencyArray = Object.keys({ ...packageJSON.dependencies, ...packageJSON.devDependencies });
+        this.projects.set(project, new Set(dependencyArray.filter(i => ConfigHelper.projects[i])));
+        dependencyArray.forEach(dependency => {
+          this.addProject(dependency);
+        });
+      } catch (error) {
+        if (error.code === 'ENOENT') {
+          console.log('Package.json file not found in the project!');
+          throw error;
+        } else {
+          throw error;
+        }
+      }
     }
   }
 
