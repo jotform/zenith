@@ -1,9 +1,12 @@
 {
   "name": "@jotforminc/zenith",
   "packageManager": "pnpm@7.18.0",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "",
   "main": "./build/index.js",
+  "files": [
+    "build"
+  ],
   "bin": {
     "zenith": "./build/index.js"
   },
