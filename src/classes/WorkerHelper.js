@@ -8,8 +8,6 @@ export default class WorkerHelper {
 
   constructor() {
     this.pool = workerpool.pool(__dirname, { maxWorkers: 6, workerType: 'thread' });
-    // const workspace = readFileSync(path.join(__dirname, '../workspace.json'), { encoding: 'utf-8' });
-    // this.workspaceJSON = JSON.parse(workspace || '').projects;
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 

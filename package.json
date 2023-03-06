@@ -4,9 +4,6 @@
   "version": "0.1.4",
   "description": "",
   "main": "./build/index.js",
-  "files": [
-    "/build"
-  ],
   "bin": {
     "zenith": "./build/index.js"
   },

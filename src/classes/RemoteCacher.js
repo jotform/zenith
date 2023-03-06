@@ -7,7 +7,6 @@ import { ROOT_PATH } from '../utils/constants';
 import Hasher from './Hasher';
 
 class RemoteCacher {
-  cachedList = new Set();
   constructor() {
     this.s3Client = new S3({
       region: 'us-east-1',

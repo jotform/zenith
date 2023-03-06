@@ -1,7 +1,12 @@
+import copy from 'rollup-plugin-copy'
+
 export default {
-  input: 'src/index.js',
+  input: {
+    index: 'src/index.js',
+    worker: 'src/worker.js'
+  },
   output: {
-    file: 'build/index.js',
+    dir: 'build',
     format: 'cjs'
   }
 }

@@ -1,14 +1,9 @@
-import { program } from 'commander';
+import { Command } from 'commander';
 import BuildHelper from './BuildHelper';
-
-program
-  .option('-p, --project <project>', 'Project name')
-  .option('-t, --target <target>', 'Target name')
-  .option('-d, --debug', 'Debug mode')
-  .option('-c, --compareWith <compareWith>', 'Compare with')
 
 export default class Runner {
   constructor(...args) {
+    const program = new Command();
     program
       .option('-p, --project <project>', 'Project name')
       .option('-t, --target <target>', 'Target name')
