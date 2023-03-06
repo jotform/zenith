@@ -23,7 +23,7 @@ class Hasher {
 
   getHash(directoryPath, script, debug, compareWith) {
     const hasher = createHash('sha256');
-    if (script) Hasher.update(script);
+    if (script) hasher.update(script);
     const directory = readdirSync(directoryPath, { withFileTypes: true });
     const packageJSONPath = path.join(directoryPath, 'package.json')
     if (existsSync(packageJSONPath)) {
@@ -31,7 +31,7 @@ class Hasher {
       const dependencies = { ...(packageJSON.dependencies || {}), ...(packageJSON.devDependencies || {}) };
       Object.entries(dependencies).sort((a, b) => a[0] - b[0]).forEach(([key, value]) => {
         if (value === 'workspace:*' && this.hashJSON[key]) {
-          Hasher.update(this.hashJSON[key]);
+          hasher.update(this.hashJSON[key]);
         }
       });
     }
@@ -55,12 +55,12 @@ class Hasher {
           }
           this.debugJSON[itemPath] = debugHash;
         }
-        Hasher.update(fileString);
+        hasher.update(fileString);
       } else if (item.isDirectory()) {
-        Hasher.update(this.getHash(itemPath, script, debug, compareWith));
+        hasher.update(this.getHash(itemPath, script, debug, compareWith));
       }
     });
-    return Hasher.digest('hex');
+    return hasher.digest('hex');
   }
 
   getUpdatedHashes() {
@@ -72,6 +72,7 @@ class Hasher {
     this.newFiles = [];
   }
 
+  // TODO :: Not used.
   updateHashJSON() {
     // writeFileSync(this.buildJSONPath, JSON.stringify(this.hashJSON));
   }

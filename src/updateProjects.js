@@ -8,7 +8,7 @@ const update = () => {
     const { root } = projects[key];
     projectsJSON[key] = root;
   }
-  writeFileSync(path.join(__dirname, 'Projects.json'), JSON.stringify(projectsJSON));
+  writeFileSync(path.join(__dirname, 'projects.json'), JSON.stringify(projectsJSON));
 }
 
 update();
