@@ -1,13 +1,11 @@
 import workerpool from 'workerpool';
-import { readFileSync } from 'fs';
-import * as path from 'path';
 import ConfigHelper from './ConfigHelper';
 
 export default class WorkerHelper {
   started = new Set();
 
   constructor() {
-    this.pool = workerpool.pool(__dirname, { maxWorkers: 6, workerType: 'thread' });
+    this.pool = workerpool.pool(__dirname + '/worker.js', { maxWorkers: 6, workerType: 'thread' });
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 
@@ -18,6 +16,7 @@ export default class WorkerHelper {
       })
     } catch (error) {
       console.log(error);
+      throw error;
     }
   }
 
@@ -28,6 +27,7 @@ export default class WorkerHelper {
       });
     } catch (error) {
       console.log(error);
+      throw error;
     }
   }
 }
