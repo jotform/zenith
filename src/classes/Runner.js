@@ -14,28 +14,24 @@ export default class Runner {
     program.parse(args);
     const options = program.opts();
     this.command = args.slice(-1);
-    const flags = args.slice(2).reduce((acc, curr) => {
-      const [key, value] = curr.split('=');
-      acc[key] = value;
-      return acc;
-    }, {});
-    if (flags['--project']) {
-      this.project = flags['--project'];
+    if (options.project) {
+      this.project = options.project;
     }
-    if (flags['--target']) {
-      this.command = flags['--target'];
+    if (options.target) {
+      this.command = options.target;
     }
-    if (flags['--debug']) {
+    if (options.debug) {
       this.debug = true;
     }
-    if (flags['--compareWith']) {
-      this.compareWith = flags['--compareWith'];
+    if (options.compareWith) {
+      this.compareWith = options.compareWith;
     }
     Logger.setLogLevel(Number(options.logLevel));
   }
 
   async run() {
     if (this.command !== 'build') {
+      Logger.log(1, 'Zenith currently only supports build command. Try again with adding "--target=build" argument.')
       return;
     }
     const Builder = new BuildHelper('build');
