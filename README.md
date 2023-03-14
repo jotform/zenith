@@ -51,7 +51,7 @@ The project uses several required environment variables and params. Without them
 ## Optional Parameters
 Below parameters are not required to work, but can be used to modify the tool's behavior.
 ```
--d, --debug: If given, enters debug mode. Usage is provided in the [debugging](#debugging) section.
+-d, --debug: If given, enters debug mode. Usage is provided in the debugging section.
 -c, --compareWith <string>: Compares and calculates the difference between a given json file and the current build.
 -l, --logLevel <1 | 2 | 3>: Sets the log level. 1=silent mode. 2=default mode, only shows errors and stats after completion. 3=verbose mode, logs cache hits, misses, recoveries.
 ```
