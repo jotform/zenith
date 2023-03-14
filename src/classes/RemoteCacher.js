@@ -4,6 +4,7 @@ import { S3 } from '@aws-sdk/client-s3';
 import zipper from 'zip-local';
 import unzipper from 'unzipper';
 import { ROOT_PATH } from '../utils/constants';
+import Logger from '../utils/logger'
 import Hasher from './Hasher';
 
 class RemoteCacher {
@@ -25,7 +26,7 @@ class RemoteCacher {
         const debugFileString = await response.Body.transformToString();
         return JSON.parse(debugFileString);
       } catch (error) {
-        console.log(error);
+        Logger.log(2, error);
       }
     }
   }
@@ -35,9 +36,9 @@ class RemoteCacher {
     const debugBuff = Buffer.from(JSON.stringify(debugJSON));
     this.s3Client.putObject({ Bucket: process.env.S3_BUCKET_NAME, Key: `frontend-build/debug/debug.${process.env.ZENITH_DEBUG_ID}.json`, Body: debugBuff }, err => {
       if (err) {
-        console.log(err);
+        Logger.log(2, err);
       }
-      console.log('Cache successfully stored');
+      Logger.log(3, 'Cache successfully stored');
     });
   }
 
@@ -55,14 +56,14 @@ class RemoteCacher {
         const outputBuff = Buffer.from(outputHash);
         this.s3Client.putObject({ Bucket: process.env.S3_BUCKET_NAME, Key: `${cachePath}/${output}.txt`, Body: outputBuff }, err => {
           if (err) {
-            console.log(err);
+            Logger.log(2, err);
             reject(err)
           }
-          console.log('Cache successfully stored')
+          Logger.log(3, 'Cache successfully stored')
           resolve();
         });
       } catch (error) {
-        console.log(error);
+        Logger.log(2, error);
       }
     })
   }
@@ -83,18 +84,18 @@ class RemoteCacher {
             const buff = zipped.memory();
             this.s3Client.putObject({ Bucket: process.env.S3_BUCKET_NAME, Key: `${cachePath}/${output}.zip`, Body: buff }, err => {
               if (err) {
-                console.log(err);
+                Logger.log(2, err);
                 reject(err)
               }
-              console.log('Cache successfully stored')
+              Logger.log(3, 'Cache successfully stored')
               resolve();
             });
           } else {
-            console.log('ERROR => ', error);
+            Logger.log(2, 'ERROR => ', error);
           }
         })
       } catch (error) {
-        console.log(error);
+        Logger.log(2, error);
         reject(error);
       }
     })
@@ -121,7 +122,7 @@ class RemoteCacher {
       const hash = await this.pipeEnd(response.Body, outputPath);
       return hash;
     } catch (error) {
-      console.log(error);
+      Logger.log(2, error);
     }
   }
 
@@ -132,7 +133,7 @@ class RemoteCacher {
       const remoteHash = await response.Body.transformToString();
       return remoteHash;
     } catch (error) {
-      console.log(error);
+      Logger.log(2, error);
     }
   }
 
