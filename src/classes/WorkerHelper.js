@@ -1,5 +1,6 @@
 import workerpool from 'workerpool';
 import ConfigHelper from './ConfigHelper';
+import Logger from '../utils/logger'
 
 export default class WorkerHelper {
   started = new Set();
@@ -12,10 +13,11 @@ export default class WorkerHelper {
   async execute(buildPath, command, hash, root, outputs) {
     try {
       return await this.pool.exec('execute', [buildPath, command, hash, root, outputs], {
-        on: message => this.log(3, message)
+        on: message => Logger.log(3, message)
       })
     } catch (error) {
-      console.log(error);
+      console.log('execute msg in')
+      Logger.log(2, error);
       throw error;
     }
   }
@@ -23,10 +25,11 @@ export default class WorkerHelper {
   async anotherJob(hash, root, output) {
     try {
       return await this.pool.exec('anotherJob', [hash, root, output], {
-        on: message => this.log(3, message)
+        on: message => Logger.log(3, message)
       });
     } catch (error) {
-      console.log(error);
+      console.log('another job msg in')
+      Logger.log(2, error);
       throw error;
     }
   }

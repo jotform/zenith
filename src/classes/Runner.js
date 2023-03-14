@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import BuildHelper from './BuildHelper';
+import Logger from '../utils/logger'
 
 export default class Runner {
   constructor(...args) {
@@ -30,14 +31,7 @@ export default class Runner {
     if (flags['--compareWith']) {
       this.compareWith = flags['--compareWith'];
     }
-    if (options.logLevel) {
-      this.logLevel = Number(options.logLevel);
-    }
-
-    this.logFunction = logLevel => (level, ...args) => {
-      if (logLevel >= level) console.log(...args);
-    }
-    this.log = this.logFunction(this.logLevel)
+    Logger.setLogLevel(Number(options.logLevel));
   }
 
   async run() {
@@ -45,8 +39,8 @@ export default class Runner {
       return;
     }
     const Builder = new BuildHelper('build');
-    await Builder.init(this.debug, this.compareWith, this.logLevel, this.logFunction);
-    this.log(2, 'Zenith started. Building...')
+    await Builder.init(this.debug, this.compareWith);
+    Logger.log(2, 'Zenith started. Building...')
     if (this.project === 'all') {
       Builder.buildAll();
     } else {

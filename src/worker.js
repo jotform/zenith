@@ -1,6 +1,7 @@
 import workerpool from 'workerpool';
 import { execSync } from 'child_process';
 import RemoteCacher from './classes/RemoteCacher';
+import Logger from './utils/logger'
 
 const execute = async (buildPath, targetCommand, hash, root, outputs) => {
   try {
@@ -25,7 +26,7 @@ const anotherJob = async (hash, root, output) => {
     workerpool.workerEmit(outputHash === remoteHash ? `Hash hit for ${root}` : `Hashes mismatched for ${root},  ${outputHash} !== ${remoteHash}`);
     return remoteHash === outputHash;
   } catch (error) {
-    console.log(error, 'IN RECOVERING CACHE');
+    Logger.log(2, error, 'IN RECOVERING CACHE');
     return error;
   }
 }
