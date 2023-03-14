@@ -12,7 +12,7 @@ export default class WorkerHelper {
   async execute(buildPath, command, hash, root, outputs) {
     try {
       return await this.pool.exec('execute', [buildPath, command, hash, root, outputs], {
-        on: message => console.log(message)
+        on: message => this.log(3, message)
       })
     } catch (error) {
       console.log(error);
@@ -23,7 +23,7 @@ export default class WorkerHelper {
   async anotherJob(hash, root, output) {
     try {
       return await this.pool.exec('anotherJob', [hash, root, output], {
-        on: message => console.log(message)
+        on: message => this.log(3, message)
       });
     } catch (error) {
       console.log(error);
