@@ -16,7 +16,6 @@ export default class WorkerHelper {
         on: message => Logger.log(3, message)
       })
     } catch (error) {
-      console.log('execute msg in')
       Logger.log(2, error);
       throw error;
     }
@@ -28,7 +27,6 @@ export default class WorkerHelper {
         on: message => Logger.log(3, message)
       });
     } catch (error) {
-      console.log('another job msg in')
       Logger.log(2, error);
       throw error;
     }
