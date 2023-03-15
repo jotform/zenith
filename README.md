@@ -1,16 +1,12 @@
-# Zenith: New way of JS monorepo builds
-## Table of contents
-
-
-- [Zenith: New way of JS monorepo builds](#zenith-new-way-of-js-monorepo-builds)
-  - [Table of contents](#table-of-contents)
-  - [What is Zenith? What is its aim?](#what-is-zenith-what-is-its-aim)
-  - [Installation](#installation)
-  - [Required Parameters](#required-parameters)
-    - [Environment Variables](#environment-variables)
-    - [Params](#params)
-  - [Optional Parameters](#optional-parameters)
-  - [Debugging](#debugging)
+# Zenith: New way of JS monorepo builds <!-- omit in toc -->
+## Table of contents <!-- omit in toc -->
+- [What is Zenith? What is its aim?](#what-is-zenith-what-is-its-aim)
+- [Installation](#installation)
+- [Required Parameters](#required-parameters)
+  - [Environment Variables](#environment-variables)
+  - [Params](#params)
+- [Optional Parameters](#optional-parameters)
+- [Debugging](#debugging)
 
 ## What is Zenith? What is its aim?
 
@@ -51,12 +47,11 @@ The project uses several required environment variables and params. Without them
 ## Optional Parameters
 Below parameters are not required to work, but can be used to modify the tool's behavior.
 ```
--d, --debug: If given, enters debug mode. Usage is provided in the debugging section.
+-d, --debug: If given, enters debug mode. Usage is provided in the [debugging](#debugging) section.
 -c, --compareWith <string>: Compares and calculates the difference between a given json file and the current build.
 -l, --logLevel <1 | 2 | 3>: Sets the log level. 1=silent mode. 2=default mode, only shows errors and stats after completion. 3=verbose mode, logs cache hits, misses, recoveries.
 ```
 
 
 ## Debugging
-WIP
-
+If -d param is given, the tool outputs which files are uploaded. It can be used to see if the tool is working as intended. By also setting -c param, you can compare builds and see which files are new, and changed or removed.
