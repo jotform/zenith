@@ -30,13 +30,9 @@ export default class Runner {
   }
 
   async run() {
-    if (this.command !== 'build') {
-      Logger.log(1, 'Zenith currently only supports build command. Try again with adding "--target=build" argument.')
-      return;
-    }
-    const Builder = new BuildHelper('build');
+    const Builder = new BuildHelper(this.command);
     await Builder.init(this.debug, this.compareWith);
-    Logger.log(2, 'Zenith started. Building...')
+    Logger.log(2, `Zenith ${this.command} started.`)
     if (this.project === 'all') {
       Builder.buildAll();
     } else {

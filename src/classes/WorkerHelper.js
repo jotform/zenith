@@ -21,9 +21,9 @@ export default class WorkerHelper {
     }
   }
 
-  async anotherJob(hash, root, output) {
+  async anotherJob(hash, root, output, target) {
     try {
-      return await this.pool.exec('anotherJob', [hash, root, output], {
+      return await this.pool.exec('anotherJob', [hash, root, output, target], {
         on: message => Logger.log(3, message)
       });
     } catch (error) {

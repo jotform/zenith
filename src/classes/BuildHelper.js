@@ -17,6 +17,7 @@ export default class BuildHelper extends WorkerHelper {
 
   constructor(command) {
     super(command);
+    this.command = command;
   }
 
   async init(debug, compareWith) {
@@ -25,7 +26,7 @@ export default class BuildHelper extends WorkerHelper {
     if (debug) {
       this.debug = debug;
       this.compareWith = compareWith;
-      const debugJSON = await this.cacher.getDebugFile(compareWith) || {};
+      const debugJSON = await this.cacher.getDebugFile(compareWith, this.command) || {};
       Hasher.updateDebugJSON(debugJSON);
     }
   }
@@ -86,10 +87,11 @@ export default class BuildHelper extends WorkerHelper {
     this.totalCount++
     const root = ConfigHelper.projects[buildProject];
     // TODO: Non cacheable projects control
-    const { build: { outputs, script } } = ConfigHelper.getConfig(buildProject, root);
+    const config = ConfigHelper.getConfig(buildProject, root);
+    const {outputs, script} = config[this.command];
     const buildPath = path.join(ROOT_PATH, root);
     const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith);
-    const isCached = await this.cacher.isCached(hash, root, outputs);
+    const isCached = await this.cacher.isCached(hash, root, outputs, script);
     if (this.compareWith) {
       const [changedFiles, newFiles] = Hasher.getUpdatedHashes();
       if (changedFiles.length || newFiles.length) {
@@ -113,7 +115,7 @@ export default class BuildHelper extends WorkerHelper {
         for (const output of outputs) {
           // const outputPath = path.join(ROOT_PATH, root, output);
           Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
-          const recoverResponse = await this.anotherJob(hash, root, output);
+          const recoverResponse = await this.anotherJob(hash, root, output, script);
           if (recoverResponse instanceof Error) {
             throw new Error(recoverResponse);
           }
@@ -156,7 +158,7 @@ export default class BuildHelper extends WorkerHelper {
         Logger.log(2, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
         Logger.log(2, `Total build took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
         if (this.debug && process.env.ZENITH_DEBUG_ID) {
-          this.cacher.updateDebugFile(Hasher.getDebugJSON());
+          this.cacher.updateDebugFile(Hasher.getDebugJSON(), this.command);
           Logger.log(2, 'DEBUG JSON UPDATED');
         }
       }
