@@ -16,16 +16,16 @@ const execute = async (buildPath, targetCommand, hash, root, outputs) => {
     }
     return { output: commandOutput };
   } catch (error) {
-    Logger.log('cmdErr',error, 'IN EXECUTE TARGET');
+    Logger.log(2, error, 'IN EXECUTE TARGET');
     return error;
   }
 }
 
-const anotherJob = async (hash, root, output, target) => {
+const anotherJob = async (hash, root, output, target, compareHash) => {
   try {
     const outputHash = await RemoteCacher.recoverFromCache(hash, root, output, target);
     workerpool.workerEmit(`Cache recovered ${root}`);
-    if (process.env.COMPARE_HASH === 'false') return true; // will be turned into a flag
+    if (!compareHash) return true;
     const remoteHash = await RemoteCacher.checkHashes(hash, root, output, target);
     workerpool.workerEmit(outputHash === remoteHash ? `Hash hit for ${root}` : `Hashes mismatched for ${root},  ${outputHash} !== ${remoteHash}`);
     return remoteHash === outputHash;

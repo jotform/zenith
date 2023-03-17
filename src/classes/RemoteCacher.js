@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, rmSync, readFileSync } from "fs";
+import { existsSync, mkdirSync, rmSync } from "fs";
 import * as path from "path";
 import { S3 } from "@aws-sdk/client-s3";
 import zipper from "zip-local";
 import unzipper from "unzipper";
 import { ROOT_PATH } from "../utils/constants";
+import { isOutputTxt } from "../utils/functions";
 import Logger from "../utils/logger";
 import Hasher from "./Hasher";
 
@@ -58,7 +59,7 @@ class RemoteCacher {
     return new Promise((resolve) => {
       try {
         const cachePath = `${target}/${hash}/${root}`;
-        const directoryPath = path.join(ROOT_PATH, root, target === 'build' ? output : '')
+        const directoryPath = path.join(ROOT_PATH, root, !isOutputTxt(output) ? output : '')
         if (!existsSync(directoryPath)) {
           resolve();
           return;
@@ -96,7 +97,7 @@ class RemoteCacher {
         }
         const cachePath = `${target}/${hash}/${root}`;
 
-        if (output !== "stdout") {
+        if (!isOutputTxt(output)) {
           zipper.zip(directoryPath, (error, zipped) => {
             if (!error) {
               zipped.compress();
@@ -133,6 +134,7 @@ class RemoteCacher {
                 reject(err);
               }
               Logger.log(3, "Cache successfully stored");
+              Logger.log(2, commandOutput)
               resolve();
             }
           );
@@ -161,33 +163,34 @@ class RemoteCacher {
   }
   
   // TODO: dont return hash
-  txtPipeEnd(stream, hash) {
+  txtPipeEnd(stream) {
     const chunks = [];
     return new Promise((resolve, reject) => {
       stream.on('data', chunk => {chunks.push(Buffer.from(chunk))});
       stream.on('error', err => reject(err));
       stream.on('end', () => {
         const output = Buffer.concat(chunks).toString('utf8');
-        console.log(output); // should not stay like this!
-        resolve(hash);
+        console.log(output)
+        resolve(output);
       });
     })
   }
 
   async recoverFromCache(originalHash, root, output, target) {
-    const remotePath = `${target}/${originalHash}/${root}/${output}.${target === 'build' ? 'zip' : 'txt'}`;
+    const isStdOut = isOutputTxt(output)
+    const remotePath = `${target}/${originalHash}/${root}/${output}.${isStdOut ? 'txt' : 'zip'}`;
     try {
       const response = await this.s3Client.getObject({
         Bucket: process.env.S3_BUCKET_NAME,
         Key: remotePath,
       });
       const outputPath = path.join(ROOT_PATH, root, output);
-      if (target === 'build' && existsSync(outputPath)) {
+      if (isStdOut) return Logger.log(2, await this.txtPipeEnd(response.Body));
+      if (existsSync(outputPath)) {
         rmSync(outputPath, { recursive: true, force: true });
         mkdirSync(outputPath);
       }
-      const hash = target === 'build' ? await this.pipeEnd(response.Body, outputPath) : await this.txtPipeEnd(response.Body, originalHash);
-      return hash;
+      return await this.pipeEnd(response.Body, outputPath);
     } catch (error) {
       Logger.log(2, error);
     }
@@ -220,7 +223,7 @@ class RemoteCacher {
       for (const output of outputs) {
         // TODO: find a better, more generalized way for extensions
         const cachePath = `${target}/${hash}/${root}/${output}.${
-          target === "build" ? "zip" : "txt"
+          isOutputTxt(output) ? "txt" : "zip"
         }`;
         if (!contents[cachePath]) {
           return false;
