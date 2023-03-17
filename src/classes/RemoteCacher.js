@@ -12,7 +12,6 @@ class RemoteCacher {
   constructor() {
     this.s3Client = new S3({
       region: "us-east-1",
-      endpoint: "http://10.10.7.79:9000",
       credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY,
         secretAccessKey: process.env.S3_SECRET_KEY,
