@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import BuildHelper from './BuildHelper';
 import Logger from '../utils/logger'
 
@@ -10,8 +10,12 @@ export default class Runner {
       .option('-t, --target <target>', 'Target name')
       .option('-d, --debug', 'Debug mode')
       .option('-c, --compareWith <compareWith>', 'Compare with')
-      .option('-ch, --compareHash', 'default: false. If true, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.')
-      .option('-l, --logLevel <logLevel>', 'Log Level [1-2-3]: 1=silent, 2=default (log info after completion and errors), 3=verbose (missing/hit cache info', 2);
+      .option('-ch, --noCompareHash', 'default: false. If false, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.')
+      .addOption(
+        new Option(
+          '-l, --logLevel <logLevel>',
+          'Log Level [1-2-3]: 1=silent, 2=default (log info after completion and errors), 3=verbose (missing/hit cache info'
+        ).choices(['1', '2', '3']).default('2'));
     program.parse(args);
     const options = program.opts();
     this.command = args.slice(-1);
@@ -27,8 +31,9 @@ export default class Runner {
     if (options.compareWith) {
       this.compareWith = options.compareWith;
     }
-    if (options.compareHash) {
-      this.compareHash = true;
+    this.compareHash = true
+    if (options.noCompareHash) {
+      this.compareHash = false;
     }
 
     Logger.setLogLevel(Number(options.logLevel));

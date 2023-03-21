@@ -10,9 +10,9 @@ export default class WorkerHelper {
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 
-  async execute(buildPath, command, hash, root, outputs) {
+  async execute(buildPath, command, hash, root, outputs, projectName) {
     try {
-      return await this.pool.exec('execute', [buildPath, command, hash, root, outputs], {
+      return await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName], {
         on: message => Logger.log(3, message)
       })
     } catch (error) {

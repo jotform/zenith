@@ -12,6 +12,7 @@ class RemoteCacher {
   constructor() {
     this.s3Client = new S3({
       region: "us-east-1",
+      endpoint: process.env.S3_ENDPOINT,
       credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY,
         secretAccessKey: process.env.S3_SECRET_KEY,
@@ -86,46 +87,17 @@ class RemoteCacher {
     });
   }
 
-  cache(hash, root, output, target, commandOutput) {
-    if (process.env.ZENITH_READ_ONLY) return;
+  cacheZip(cachePath, output, directoryPath) {
     return new Promise((resolve, reject) => {
-      try {
-        const directoryPath = path.join(ROOT_PATH, root, output);
-        if (!existsSync(directoryPath)) {
-          mkdirSync(directoryPath);
-        }
-        const cachePath = `${target}/${hash}/${root}`;
-
-        if (!isOutputTxt(output)) {
-          zipper.zip(directoryPath, (error, zipped) => {
-            if (!error) {
-              zipped.compress();
-              const buff = zipped.memory();
-              this.s3Client.putObject(
-                {
-                  Bucket: process.env.S3_BUCKET_NAME,
-                  Key: `${cachePath}/${output}.zip`,
-                  Body: buff,
-                },
-                (err) => {
-                  if (err) {
-                    Logger.log(2, err);
-                    reject(err);
-                  }
-                  Logger.log(3, "Cache successfully stored");
-                  resolve();
-                }
-              );
-            } else {
-              Logger.log(2, "ERROR => ", error);
-            }
-          });
-        } else {
+      zipper.zip(directoryPath, (error, zipped) => {
+        if (!error) {
+          zipped.compress();
+          const buff = zipped.memory();
           this.s3Client.putObject(
             {
               Bucket: process.env.S3_BUCKET_NAME,
-              Key: `${cachePath}/${output}.txt`,
-              Body: commandOutput,
+              Key: `${cachePath}/${output}.zip`,
+              Body: buff,
             },
             (err) => {
               if (err) {
@@ -133,16 +105,55 @@ class RemoteCacher {
                 reject(err);
               }
               Logger.log(3, "Cache successfully stored");
-              Logger.log(2, commandOutput)
               resolve();
             }
           );
+        } else {
+          Logger.log(2, "ERROR => ", error);
+          reject(error);
         }
-      } catch (error) {
-        Logger.log(2, error);
-        reject(error);
-      }
+      })
     });
+  }
+
+  cacheTxt(cachePath, output, commandOutput) {
+    return new Promise((resolve, reject) => this.s3Client.putObject(
+      {
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: `${cachePath}/${output}.txt`,
+        Body: commandOutput,
+      },
+      (err) => {
+        if (err) {
+          Logger.log(2, err);
+          reject(err);
+        }
+        Logger.log(3, "Cache successfully stored");
+        Logger.log(2, commandOutput)
+        resolve();
+      }
+    ));
+  }
+
+  async cache(hash, root, output, target, commandOutput) {
+    if (process.env.ZENITH_READ_ONLY) return;
+    try {
+      const directoryPath = path.join(ROOT_PATH, root, output);
+      if (!existsSync(directoryPath)) {
+        mkdirSync(directoryPath);
+      }
+      const cachePath = `${target}/${hash}/${root}`;
+      switch (output) {
+        case 'stdout':
+          await this.cacheTxt(cachePath, output, commandOutput)
+          break
+        default:
+          await this.cacheZip(cachePath, output, directoryPath)
+      }
+    } catch (error) {
+      Logger.log(2, error);
+      throw new Error(error)
+    };
   }
 
   pipeEnd(stream, outputPath) {

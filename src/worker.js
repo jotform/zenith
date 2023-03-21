@@ -4,11 +4,11 @@ import RemoteCacher from './classes/RemoteCacher';
 import Logger from './utils/logger'
 import { ROOT_PATH } from './utils/constants';
 
-const execute = async (buildPath, targetCommand, hash, root, outputs) => {
+const execute = async (buildPath, targetCommand, hash, root, outputs, projectName) => {
   try {
     workerpool.workerEmit(`Running ${targetCommand} command for => ${buildPath.split('/').pop()}`);
     // TODO: anything better than substr
-    const commandOutput = execSync(`pnpm  --filter ${buildPath.substr(buildPath.lastIndexOf('/') + 1)} ${targetCommand}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
+    const commandOutput = execSync(`pnpm --filter ${projectName} ${targetCommand}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
     await Promise.all(outputs.map(output => RemoteCacher.cache(hash, root, output, targetCommand, commandOutput)));
     await Promise.all(outputs.map(output => RemoteCacher.sendOutputHash(hash, root, output, targetCommand)));
     if (!process.env.ZENITH_READ_ONLY) {
