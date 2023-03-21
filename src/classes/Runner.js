@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import BuildHelper from './BuildHelper';
 import Logger from '../utils/logger'
 
@@ -10,7 +10,12 @@ export default class Runner {
       .option('-t, --target <target>', 'Target name')
       .option('-d, --debug', 'Debug mode')
       .option('-c, --compareWith <compareWith>', 'Compare with')
-      .option('-l, --logLevel <logLevel>', 'Log Level [1-2-3]: 1=silent, 2=default (log info after completion and errors), 3=verbose (missing/hit cache info', 2);
+      .option('-ch, --noCompareHash', 'default: false. If false, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.')
+      .addOption(
+        new Option(
+          '-l, --logLevel <logLevel>',
+          'Log Level [1-2-3]: 1=silent, 2=default (log info after completion and errors), 3=verbose (missing/hit cache info'
+        ).choices(['1', '2', '3']).default('2'));
     program.parse(args);
     const options = program.opts();
     this.command = args.slice(-1);
@@ -26,17 +31,18 @@ export default class Runner {
     if (options.compareWith) {
       this.compareWith = options.compareWith;
     }
+    this.compareHash = true
+    if (options.noCompareHash) {
+      this.compareHash = false;
+    }
+
     Logger.setLogLevel(Number(options.logLevel));
   }
 
   async run() {
-    if (this.command !== 'build') {
-      Logger.log(1, 'Zenith currently only supports build command. Try again with adding "--target=build" argument.')
-      return;
-    }
-    const Builder = new BuildHelper('build');
-    await Builder.init(this.debug, this.compareWith);
-    Logger.log(2, 'Zenith started. Building...')
+    const Builder = new BuildHelper(this.command);
+    await Builder.init(this.debug, this.compareWith, this.compareHash);
+    Logger.log(2, `Zenith ${this.command} started.`)
     if (this.project === 'all') {
       Builder.buildAll();
     } else {

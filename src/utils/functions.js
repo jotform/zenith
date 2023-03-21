@@ -1,4 +1,5 @@
 import { readFileSync, existsSync } from "fs";
+import { SAVE_AS_TXT_KEYWORD } from "./constants";
 
 export const readFileAsJSON = (path) => {
   if (existsSync(path)) {
@@ -20,3 +21,9 @@ export const formatTimeDiff = (time) => {
   }
   return `(${seconds}s)`;
 };
+
+// output is expected to be a string or array of strings
+export const isOutputTxt = (output) => {
+  if (typeof output === 'string') return output === SAVE_AS_TXT_KEYWORD;
+  return output.includes(SAVE_AS_TXT_KEYWORD)
+}

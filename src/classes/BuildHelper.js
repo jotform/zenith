@@ -5,7 +5,7 @@ import Cacher from './Cacher';
 import Hasher from './Hasher';
 import WorkerHelper from './WorkerHelper';
 import ConfigHelper from './ConfigHelper';
-import { formatMissingProjects, formatTimeDiff } from '../utils/functions';
+import { formatMissingProjects, formatTimeDiff, isOutputTxt } from '../utils/functions';
 import Logger from '../utils/logger'
 
 export default class BuildHelper extends WorkerHelper {
@@ -17,15 +17,17 @@ export default class BuildHelper extends WorkerHelper {
 
   constructor(command) {
     super(command);
+    this.command = command;
   }
 
-  async init(debug, compareWith) {
+  async init(debug, compareWith, compareHash) {
     this.cacher = new Cacher().cacher;
+    this.compareHash = compareHash;
     this.startTime = process.hrtime();
     if (debug) {
       this.debug = debug;
       this.compareWith = compareWith;
-      const debugJSON = await this.cacher.getDebugFile(compareWith) || {};
+      const debugJSON = await this.cacher.getDebugFile(compareWith, this.command) || {};
       Hasher.updateDebugJSON(debugJSON);
     }
   }
@@ -85,11 +87,13 @@ export default class BuildHelper extends WorkerHelper {
   async builder(buildProject) {
     this.totalCount++
     const root = ConfigHelper.projects[buildProject];
+    const projectName = root.substr(root.lastIndexOf('/') + 1)
     // TODO: Non cacheable projects control
-    const { build: { outputs, script } } = ConfigHelper.getConfig(buildProject, root);
+    const config = ConfigHelper.getConfig(buildProject, root);
+    const {outputs, script} = config[this.command];
     const buildPath = path.join(ROOT_PATH, root);
     const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith);
-    const isCached = await this.cacher.isCached(hash, root, outputs);
+    const isCached = await this.cacher.isCached(hash, root, outputs, script);
     if (this.compareWith) {
       const [changedFiles, newFiles] = Hasher.getUpdatedHashes();
       if (changedFiles.length || newFiles.length) {
@@ -101,11 +105,15 @@ export default class BuildHelper extends WorkerHelper {
       Logger.log(3, 'Cache does not exist for => ', buildProject, hash);
       
       const startTime = process.hrtime();
-      const output = await this.execute(buildPath, script, hash, root, outputs);
+      const output = await this.execute(buildPath, script, hash, root, outputs, projectName);
       this.missingProjects.push({ buildProject, time: process.hrtime(startTime)});
       if (output instanceof Error) {
         // process.exit(0);
+        Logger.log(2, 'Error in path ::', buildPath)
         throw new Error(output);
+      }
+      if (isOutputTxt(outputs)) {
+        Logger.log(2, output.output)
       }
       this.built++
     } else {
@@ -113,13 +121,13 @@ export default class BuildHelper extends WorkerHelper {
         for (const output of outputs) {
           // const outputPath = path.join(ROOT_PATH, root, output);
           Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
-          const recoverResponse = await this.anotherJob(hash, root, output);
+          const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash);
           if (recoverResponse instanceof Error) {
             throw new Error(recoverResponse);
           }
           if (!recoverResponse) {
             // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
-            await this.execute(buildPath, script, hash, root, outputs);
+            await this.execute(buildPath, script, hash, root, outputs, projectName);
             this.built++
           } else {
             this.fromCache++
@@ -150,13 +158,13 @@ export default class BuildHelper extends WorkerHelper {
 ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░▌          ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌     ▐░▌     ▐░░░░░░░░░░░▌▐░░░░░░░░░░▌ ▐░▌
  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀            ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀       ▀       ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀   ▀                                                                                                                                                                                                  
 `);
-        Logger.log(2, `Total of ${this.totalCount} project${this.totalCount === 1 ? '' : 's'} has built.`);
-        Logger.log(2, `${this.fromCache} project built from cache,`);
-        Logger.log(2, `${this.built} project built without cache.`);
+        Logger.log(2, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
+        Logger.log(2, `${this.fromCache} projects used from cache,`);
+        Logger.log(2, `${this.built} projects used without cache.`);
         Logger.log(2, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
-        Logger.log(2, `Total build took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
+        Logger.log(2, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
         if (this.debug && process.env.ZENITH_DEBUG_ID) {
-          this.cacher.updateDebugFile(Hasher.getDebugJSON());
+          this.cacher.updateDebugFile(Hasher.getDebugJSON(), this.command);
           Logger.log(2, 'DEBUG JSON UPDATED');
         }
       }

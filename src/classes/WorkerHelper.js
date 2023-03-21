@@ -10,9 +10,9 @@ export default class WorkerHelper {
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 
-  async execute(buildPath, command, hash, root, outputs) {
+  async execute(buildPath, command, hash, root, outputs, projectName) {
     try {
-      return await this.pool.exec('execute', [buildPath, command, hash, root, outputs], {
+      return await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName], {
         on: message => Logger.log(3, message)
       })
     } catch (error) {
@@ -21,9 +21,9 @@ export default class WorkerHelper {
     }
   }
 
-  async anotherJob(hash, root, output) {
+  async anotherJob(hash, root, output, target, compareHashes) {
     try {
-      return await this.pool.exec('anotherJob', [hash, root, output], {
+      return await this.pool.exec('anotherJob', [hash, root, output, target, compareHashes], {
         on: message => Logger.log(3, message)
       });
     } catch (error) {
