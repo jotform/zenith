@@ -87,7 +87,6 @@ export default class BuildHelper extends WorkerHelper {
   async builder(buildProject) {
     this.totalCount++
     const root = ConfigHelper.projects[buildProject];
-    const projectName = root.substr(root.lastIndexOf('/') + 1)
     // TODO: Non cacheable projects control
     const config = ConfigHelper.getConfig(buildProject, root);
     const {outputs, script} = config[this.command];
@@ -105,7 +104,7 @@ export default class BuildHelper extends WorkerHelper {
       Logger.log(3, 'Cache does not exist for => ', buildProject, hash);
       
       const startTime = process.hrtime();
-      const output = await this.execute(buildPath, script, hash, root, outputs, projectName);
+      const output = await this.execute(buildPath, script, hash, root, outputs, buildProject);
       this.missingProjects.push({ buildProject, time: process.hrtime(startTime)});
       if (output instanceof Error) {
         // process.exit(0);
@@ -127,7 +126,7 @@ export default class BuildHelper extends WorkerHelper {
           }
           if (!recoverResponse) {
             // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
-            await this.execute(buildPath, script, hash, root, outputs, projectName);
+            await this.execute(buildPath, script, hash, root, outputs, buildProject);
             this.built++
           } else {
             this.fromCache++
