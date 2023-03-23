@@ -14,6 +14,7 @@ export default class BuildHelper extends WorkerHelper {
   fromCache = 0;
   built = 0;
   missingProjects = [];
+  hashMismatchProjects = [];
 
   constructor(command) {
     super(command);
@@ -121,6 +122,7 @@ export default class BuildHelper extends WorkerHelper {
         for (const output of outputs) {
           // const outputPath = path.join(ROOT_PATH, root, output);
           Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
+          const startTime = process.hrtime();
           const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash, this.logAffected);
           if (recoverResponse instanceof Error) {
             throw new Error(recoverResponse);
@@ -128,6 +130,7 @@ export default class BuildHelper extends WorkerHelper {
           if (!recoverResponse) {
             // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
             await this.execute(buildPath, script, hash, root, outputs, buildProject);
+            this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime)});
             this.built++
           } else {
             this.fromCache++
@@ -162,6 +165,7 @@ export default class BuildHelper extends WorkerHelper {
         Logger.log(2, `${this.fromCache} projects used from cache,`);
         Logger.log(2, `${this.built} projects used without cache.`);
         Logger.log(2, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
+        Logger.log(2, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
         Logger.log(2, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
         if (this.debug && process.env.ZENITH_DEBUG_ID) {
           this.cacher.updateDebugFile(Hasher.getDebugJSON(), this.command);
