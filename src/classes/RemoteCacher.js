@@ -138,8 +138,8 @@ class RemoteCacher {
     if (process.env.ZENITH_READ_ONLY) return;
     try {
       const directoryPath = path.join(ROOT_PATH, root, output);
-      if (!existsSync(directoryPath)) {
-        mkdirSync(directoryPath);
+      if (output !== 'stdout' && !existsSync(directoryPath)) {
+        return;
       }
       const cachePath = `${target}/${hash}/${root}`;
       switch (output) {
