@@ -21,9 +21,9 @@ const execute = async (buildPath, targetCommand, hash, root, outputs, projectNam
   }
 }
 
-const anotherJob = async (hash, root, output, target, compareHash) => {
+const anotherJob = async (hash, root, output, target, compareHash, logAffected) => {
   try {
-    const outputHash = await RemoteCacher.recoverFromCache(hash, root, output, target);
+    const outputHash = await RemoteCacher.recoverFromCache(hash, root, output, target, logAffected);
     workerpool.workerEmit(`Cache recovered ${root}`);
     if (!compareHash) return true;
     const remoteHash = await RemoteCacher.checkHashes(hash, root, output, target);

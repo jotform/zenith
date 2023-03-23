@@ -20,9 +20,10 @@ export default class BuildHelper extends WorkerHelper {
     this.command = command;
   }
 
-  async init(debug, compareWith, compareHash) {
+  async init({debug, compareWith, compareHash, logAffected}) {
     this.cacher = new Cacher().cacher;
     this.compareHash = compareHash;
+    this.logAffected = logAffected;
     this.startTime = process.hrtime();
     if (debug) {
       this.debug = debug;
@@ -120,7 +121,7 @@ export default class BuildHelper extends WorkerHelper {
         for (const output of outputs) {
           // const outputPath = path.join(ROOT_PATH, root, output);
           Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
-          const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash);
+          const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash, this.logAffected);
           if (recoverResponse instanceof Error) {
             throw new Error(recoverResponse);
           }
