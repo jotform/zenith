@@ -128,6 +128,7 @@ class RemoteCacher {
           reject(err);
         }
         Logger.log(3, "Cache successfully stored");
+        Logger.log(2, commandOutput)
         resolve();
       }
     ));
@@ -178,7 +179,6 @@ class RemoteCacher {
       stream.on('error', err => reject(err));
       stream.on('end', () => {
         const output = Buffer.concat(chunks).toString('utf8');
-        console.log(output)
         resolve(output);
       });
     })
