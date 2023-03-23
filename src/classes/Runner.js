@@ -11,6 +11,7 @@ export default class Runner {
       .option('-d, --debug', 'Debug mode')
       .option('-c, --compareWith <compareWith>', 'Compare with')
       .option('-ch, --noCompareHash', 'default: false. If false, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.')
+      .option('-la, --logAffected', 'default: false. If true, will log outputs of ONLY missed caches\' executes.')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -35,13 +36,21 @@ export default class Runner {
     if (options.noCompareHash) {
       this.compareHash = false;
     }
+    if (options.logAffected) {
+      this.logAffected = true;
+    }
 
     Logger.setLogLevel(Number(options.logLevel));
   }
 
   async run() {
     const Builder = new BuildHelper(this.command);
-    await Builder.init(this.debug, this.compareWith, this.compareHash);
+    await Builder.init({
+      debug: this.debug, 
+      compareWith: this.compareWith, 
+      compareHash: this.compareHash, 
+      logAffected: this.logAffected
+    });
     Logger.log(2, `Zenith ${this.command} started.`)
     if (this.project === 'all') {
       Builder.buildAll();

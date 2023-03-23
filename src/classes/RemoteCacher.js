@@ -185,7 +185,7 @@ class RemoteCacher {
     })
   }
 
-  async recoverFromCache(originalHash, root, output, target) {
+  async recoverFromCache(originalHash, root, output, target, logAffected) {
     const isStdOut = isOutputTxt(output)
     const remotePath = `${target}/${originalHash}/${root}/${output}.${isStdOut ? 'txt' : 'zip'}`;
     try {
@@ -194,7 +194,11 @@ class RemoteCacher {
         Key: remotePath,
       });
       const outputPath = path.join(ROOT_PATH, root, output);
-      if (isStdOut) return Logger.log(2, await this.txtPipeEnd(response.Body));
+      if (isStdOut) {
+        const stdout = await this.txtPipeEnd(response.Body);
+        if (logAffected) return stdout
+        return Logger.log(2, await this.txtPipeEnd(response.Body));
+      }
       if (existsSync(outputPath)) {
         rmSync(outputPath, { recursive: true, force: true });
         mkdirSync(outputPath);
