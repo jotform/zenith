@@ -78,8 +78,6 @@ class RemoteCacher {
             }
           }
         );
-        Logger.log(3, "Cache successfully stored");
-        resolve();
       } catch (error) {
         Logger.log(2, error);
       }
