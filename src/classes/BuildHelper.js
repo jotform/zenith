@@ -110,7 +110,8 @@ export default class BuildHelper extends WorkerHelper {
       this.missingProjects.push({ buildProject, time: process.hrtime(startTime)});
       if (output instanceof Error) {
         // process.exit(0);
-        Logger.log(2, 'Error in path ::', buildPath)
+        Logger.log(2, 'Error in path ::', buildPath);
+        Logger.log(2, output);
         throw new Error(output);
       }
       if (isOutputTxt(outputs)) {
