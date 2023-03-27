@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
+import ConfigHelperInstance from './ConfigHelper';
 
 class Hasher {
   hashJSON = {};
@@ -11,9 +12,7 @@ class Hasher {
 
   constructor() {
     this.hashJSON = {};
-    const ignorePath = path.join(ROOT_PATH, '.zenithignore')
-    const ignoreFile = readFileSync(ignorePath, { encoding: 'utf-8'})
-    this.excludeDirs = ignoreFile.split(/\r?\n/)
+    this.excludeDirs = ConfigHelperInstance.ignoreFiles
   }
 
   updateDebugJSON(debugJSON) {
