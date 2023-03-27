@@ -1,16 +1,19 @@
 import { createHash } from 'crypto';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import * as path from 'path';
+import { ROOT_PATH } from '../utils/constants';
 
 class Hasher {
   hashJSON = {};
   // buildJSONPath = path.join(__dirname, '../build.json');
   changedHash = [];
   newFiles = [];
-  excludeDirs = ['node_modules', '.gitignore', 'build', 'lib', 'dist', 'cdn', 'playwright-report', 'webpack.sock', '.DS_Store'];
 
   constructor() {
     this.hashJSON = {};
+    const ignorePath = path.join(ROOT_PATH, '.zenithignore')
+    const ignoreFile = readFileSync(ignorePath, { encoding: 'utf-8'})
+    this.excludeDirs = ignoreFile.split(/\r?\n/)
   }
 
   updateDebugJSON(debugJSON) {
