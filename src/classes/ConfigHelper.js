@@ -8,10 +8,11 @@ class ConfigHelper {
     this.buildConfigJSON = config.buildConfig;
     this.projects = config.projects;
     this.ignoreFiles = config.ignore;
+    this.appDirectories = config.appDirectories;
   }
 
   getConfig(configName, root) {
-    const exist = ['/apps/', '/bundlers/'].find(i => root.includes(i));
+    const exist = this.appDirectories.find(i => root.includes(i));
     return this.buildConfigJSON[configName] ? this.buildConfigJSON[configName] : this.buildConfigJSON[exist ? 'appConfig' : 'mainConfig'];
   }
 }
