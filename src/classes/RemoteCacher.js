@@ -63,7 +63,7 @@ class RemoteCacher {
           resolve();
           return;
         }
-        const outputHash = Hasher.getHash(directoryPath);
+        const outputHash = Hasher.getHash(directoryPath, target);
         const outputBuff = Buffer.from(outputHash);
         this.s3Client.putObject(
           {
@@ -155,14 +155,14 @@ class RemoteCacher {
     };
   }
 
-  pipeEnd(stream, outputPath) {
+  pipeEnd(stream, outputPath, target) {
     return new Promise((resolve) => {
       stream
         .pipe(
           unzipper
             .Extract({ path: outputPath })
             .on("close", () => {
-              const hash = Hasher.getHash(outputPath);
+              const hash = Hasher.getHash(outputPath, target);
               resolve(hash);
             })
             .on("error", (unzipperErr) => reject(unzipperErr))
@@ -202,7 +202,7 @@ class RemoteCacher {
         rmSync(outputPath, { recursive: true, force: true });
         mkdirSync(outputPath);
       }
-      return await this.pipeEnd(response.Body, outputPath);
+      return await this.pipeEnd(response.Body, outputPath, target);
     } catch (error) {
       Logger.log(2, error);
     }

@@ -8,6 +8,7 @@ class ConfigHelper {
     this.buildConfigJSON = config.buildConfig;
     this.projects = config.projects;
     this.ignoreFiles = config.ignore;
+    this.ignoreDependencies = config.ignoreDependencies;
     this.appDirectories = config.appDirectories;
   }
 
