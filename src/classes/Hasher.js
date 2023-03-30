@@ -13,7 +13,6 @@ class Hasher {
   constructor() {
     this.hashJSON = {};
     this.excludeDirs = ConfigHelperInstance.ignoreFiles;
-    this.ignoreDepsScripts = ConfigHelperInstance.ignoreDependencies;
   }
 
   updateDebugJSON(debugJSON) {
@@ -29,8 +28,7 @@ class Hasher {
     if (script) hasher.update(script);
     const directory = readdirSync(directoryPath, { withFileTypes: true });
     const packageJSONPath = path.join(directoryPath, 'package.json')
-    const ignoreDeps = this.ignoreDepsScripts.includes(script)
-    if (existsSync(packageJSONPath) && !ignoreDeps) {
+    if (existsSync(packageJSONPath)) {
       const packageJSON = JSON.parse(readFileSync(packageJSONPath, { encoding: 'utf-8' }));
       const dependencies = { ...(packageJSON.dependencies || {}), ...(packageJSON.devDependencies || {}) };
       Object.entries(dependencies).sort((a, b) => a[0] - b[0]).forEach(([key, value]) => {
