@@ -19,9 +19,9 @@ class RemoteCacher {
     });
   }
 
-  async getDebugFile(compareWith, target) {
+  async getDebugFile(compareWith, target, debugLocation) {
     if (compareWith) {
-      const debugFilePath = `${target}/debug/debug.${compareWith}.json`;
+      const debugFilePath = `${target}/${debugLocation}debug.${compareWith}.json`;
       try {
         const response = await this.s3Client.getObject({
           Bucket: process.env.S3_BUCKET_NAME,
@@ -35,13 +35,13 @@ class RemoteCacher {
     }
   }
 
-  updateDebugFile(debugJSON, target) {
+  updateDebugFile(debugJSON, target, debugLocation) {
     if (process.env.ZENITH_READ_ONLY) return;
     const debugBuff = Buffer.from(JSON.stringify(debugJSON));
     this.s3Client.putObject(
       {
         Bucket: process.env.S3_BUCKET_NAME,
-        Key: `${target}/debug/debug.${process.env.ZENITH_DEBUG_ID}.json`,
+        Key: `${target}/${debugLocation}debug.${process.env.ZENITH_DEBUG_ID}.json`,
         Body: debugBuff,
       },
       (err) => {

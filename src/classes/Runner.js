@@ -16,7 +16,13 @@ export default class Runner {
         new Option(
           '-l, --logLevel <logLevel>',
           'Log Level [1-2-3]: 1=silent, 2=default (log info after completion and errors), 3=verbose (missing/hit cache info'
-        ).choices(['1', '2', '3']).default('2'));
+        ).choices(['1', '2', '3']).default('2'))
+      .addOption(
+        new Option(
+          '-dl, --debugLocation <debugLocation>',
+          'Debug Location: sets the prefix of the debug location. By default, it is "debug/", and it usage is as follows: \n {target}/{debugLocation}debug.{hash}.json'
+        ).default('debug/')
+      )
     program.parse(args);
     const options = program.opts();
     this.command = args.slice(-1);
@@ -39,6 +45,7 @@ export default class Runner {
     if (options.logAffected) {
       this.logAffected = true;
     }
+    this.debugLocation = options.debugLocation;
 
     Logger.setLogLevel(Number(options.logLevel));
   }
@@ -49,7 +56,8 @@ export default class Runner {
       debug: this.debug, 
       compareWith: this.compareWith, 
       compareHash: this.compareHash, 
-      logAffected: this.logAffected
+      logAffected: this.logAffected,
+      debugLocation: this.debugLocation
     });
     Logger.log(2, `Zenith ${this.command} started.`)
     if (this.project === 'all') {
