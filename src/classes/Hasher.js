@@ -1,16 +1,19 @@
 import { createHash } from 'crypto';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import * as path from 'path';
+import { ROOT_PATH } from '../utils/constants';
+import ConfigHelperInstance from './ConfigHelper';
 
 class Hasher {
   hashJSON = {};
   // buildJSONPath = path.join(__dirname, '../build.json');
   changedHash = [];
   newFiles = [];
-  excludeDirs = ['node_modules', '.gitignore', 'build', 'lib', 'dist', 'cdn', 'playwright-report', 'webpack.sock', '.DS_Store'];
 
   constructor() {
     this.hashJSON = {};
+    this.excludeDirs = ConfigHelperInstance.ignoreFiles;
+    this.ignoreDepsScripts = ConfigHelperInstance.ignoreDependencies;
   }
 
   updateDebugJSON(debugJSON) {
@@ -26,7 +29,8 @@ class Hasher {
     if (script) hasher.update(script);
     const directory = readdirSync(directoryPath, { withFileTypes: true });
     const packageJSONPath = path.join(directoryPath, 'package.json')
-    if (existsSync(packageJSONPath)) {
+    const ignoreDeps = this.ignoreDepsScripts.includes(script)
+    if (existsSync(packageJSONPath) && !ignoreDeps) {
       const packageJSON = JSON.parse(readFileSync(packageJSONPath, { encoding: 'utf-8' }));
       const dependencies = { ...(packageJSON.dependencies || {}), ...(packageJSON.devDependencies || {}) };
       Object.entries(dependencies).sort((a, b) => a[0] - b[0]).forEach(([key, value]) => {

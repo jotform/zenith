@@ -1,15 +1,19 @@
 import { readFileSync } from 'fs';
-import * as path from 'path';;
+import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
 
 class ConfigHelper {
   constructor() {
-    this.buildConfigJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, 'build.config.json'), { encoding: 'utf-8' }));
-    this.projects = JSON.parse(readFileSync(path.join(ROOT_PATH, 'projects.json')));
+    const config = JSON.parse(readFileSync(path.join(ROOT_PATH, 'zenith.json'), { encoding: 'utf-8' }));
+    this.buildConfigJSON = config.buildConfig;
+    this.projects = config.projects;
+    this.ignoreFiles = config.ignore;
+    this.ignoreDependencies = config.ignoreDependencies;
+    this.appDirectories = config.appDirectories;
   }
 
   getConfig(configName, root) {
-    const exist = ['/apps/', '/bundlers/'].find(i => root.includes(i));
+    const exist = this.appDirectories.find(i => root.includes(i));
     return this.buildConfigJSON[configName] ? this.buildConfigJSON[configName] : this.buildConfigJSON[exist ? 'appConfig' : 'mainConfig'];
   }
 }
