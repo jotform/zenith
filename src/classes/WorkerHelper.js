@@ -6,7 +6,7 @@ export default class WorkerHelper {
   started = new Set();
 
   constructor() {
-    this.pool = workerpool.pool(__dirname + '/worker.js', { maxWorkers: 6, workerType: 'thread' });
+    this.pool = workerpool.pool(__dirname + '/worker.js', { maxWorkers: 10, workerType: 'thread' });
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 
