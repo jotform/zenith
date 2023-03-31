@@ -16,8 +16,8 @@ export default class BuildHelper extends WorkerHelper {
   missingProjects = [];
   hashMismatchProjects = [];
 
-  constructor(command) {
-    super(command);
+  constructor(command, worker) {
+    super(command, worker);
     this.command = command;
   }
 

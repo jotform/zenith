@@ -5,8 +5,13 @@ import Logger from '../utils/logger'
 export default class WorkerHelper {
   started = new Set();
 
-  constructor() {
-    this.pool = workerpool.pool(__dirname + '/worker.js', { maxWorkers: 10, workerType: 'thread' });
+  constructor(command, worker) {
+    const workerConfig = {
+      workerType: 'thread',
+      // workerpool sets workers to total cpu - 1 if maxWorkers is undefined.
+      ...(worker === 'max' ? {} : {maxWorkers: Number(worker)})
+    }
+    this.pool = workerpool.pool(__dirname + '/worker.js', workerConfig);
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 
