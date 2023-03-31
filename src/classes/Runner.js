@@ -16,7 +16,12 @@ export default class Runner {
         new Option(
           '-l, --logLevel <logLevel>',
           'Log Level [1-2-3]: 1=silent, 2=default (log info after completion and errors), 3=verbose (missing/hit cache info'
-        ).choices(['1', '2', '3']).default('2'));
+        ).choices(['1', '2', '3']).default('2'))
+      .addOption(
+        new Option(
+          '-w, --worker <worker>',
+          'Worker Number (default = 6): sets the maximum number of workers that run concurrently.'
+        ).default('6'));
     program.parse(args);
     const options = program.opts();
     this.command = args.slice(-1);
@@ -39,12 +44,13 @@ export default class Runner {
     if (options.logAffected) {
       this.logAffected = true;
     }
+    this.worker = options.worker;
 
     Logger.setLogLevel(Number(options.logLevel));
   }
 
   async run() {
-    const Builder = new BuildHelper(this.command);
+    const Builder = new BuildHelper(this.command, this.worker);
     await Builder.init({
       debug: this.debug, 
       compareWith: this.compareWith, 
