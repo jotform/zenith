@@ -2,7 +2,7 @@
 ## Table of contents <!-- omit in toc -->
 - [What is Zenith? What is its aim?](#what-is-zenith-what-is-its-aim)
 - [Installation](#installation)
-- [projects.json: What is it, and why it is required?](#projectsjson-what-is-it-and-why-it-is-required)
+- [zenith.json: What is it, and why it is required?](#zenithjson-what-is-it-and-why-it-is-required)
 - [Required Parameters](#required-parameters)
   - [Environment Variables](#environment-variables)
   - [Params](#params)
@@ -26,17 +26,53 @@ From the terminal, run:
 pnpm/yarn/npm zenith --target=("build" | "test") --project=("all" | <project_name>)
 ```
 Target and project arguments are required for now. Without them the tool will not work.
-## projects.json: What is it, and why it is required?
-Zenith looks for a file named "projects.json" in the same folder where your root package.json file is in. This file is used as a map: It is used to match the projects and their paths in order to cache them one by one. For example:
+## zenith.json: What is it, and why it is required?
+Zenith looks for a file named "zenith.json" in the same folder where your root package.json file is in. This file is used to determine the behavior of zenith. It MUST include 'projects' and 'buildConfig' keys, and MAY include 'ignore' and 'appDirectories' keys. An example of usage is as follows.
 ```
-//projects.json
+//zenith.json
 {
-  "@jotforminc/<app1>":"projects/applications/<app1>",
-  "@jotforminc/<app2>":"projects/applications/<app2>",
-  "@jotforminc/<lib1>":"projects/libraries/<lib1>"
+  "projects": {
+    "@jotforminc/<app1>":"projects/applications/<app1>",
+    "@jotforminc/<app2>":"projects/applications/<app2>",
+    "@jotforminc/<lib1>":"projects/libraries/<lib1>"
+  },
+  "buildConfig": {
+    "cachePath": ".customCache",
+    "appConfig": {
+      "build": {
+        "script": "build",
+        "outputs": ["build"]
+      },
+      "lint:js": {
+        "script": "lint:js",
+        "outputs": ["stdout"],
+        "constantDependencies": ["@jotforminc/lib1"]
+      }
+    },
+    "mainConfig": {
+      "build": {
+        "script": "build",
+        "outputs": ["build"]
+      },
+      "lint:js": {
+        "script": "lint:js",
+        "outputs": ["stdout"],
+        "constantDependencies": ["@jotforminc/lib1", "@jotforminc/lib2"]
+      }
+    },
+  },
+  "ignore": [
+    "node_modules",
+    ".gitignore",
+    "build",
+    "lib",
+    "dist",
+    ".DS_Store",
+    "test-results",
+  ],
+  "appDirectories": ["/apps/"],
 }
 ```
-In this stage of development, there is no ignore functionality: You should add all of your projects in this file in order to build all your projects at once.
 ## Required Parameters
 The project uses several required environment variables and params. Without them, the tool will not work as intended.
 ### Environment Variables
