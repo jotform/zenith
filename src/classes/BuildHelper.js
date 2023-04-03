@@ -98,9 +98,9 @@ export default class BuildHelper extends WorkerHelper {
         script: this.command
       };
     }
-    const {outputs, script} = config[this.command];
+    const {outputs, script, constantDependencies} = config[this.command];
     const buildPath = path.join(ROOT_PATH, root);
-    const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith);
+    const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
     const isCached = await this.cacher.isCached(hash, root, outputs, script);
     if (this.compareWith) {
       const [changedFiles, newFiles] = Hasher.getUpdatedHashes();

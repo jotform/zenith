@@ -23,20 +23,31 @@ class Hasher {
     return this.debugJSON;
   }
 
-  getHash(directoryPath, script, debug, compareWith) {
-    const hasher = createHash('sha256');
-    if (script) hasher.update(script);
-    const directory = readdirSync(directoryPath, { withFileTypes: true });
+  updateHashWithArray(hasher, array) {
+    array.forEach(element => {
+      if (this.hashJSON[element]) hasher.update(this.hashJSON[element]);
+    })
+  }
+
+  updateDependencyHash(hasher, directoryPath) {
     const packageJSONPath = path.join(directoryPath, 'package.json')
     if (existsSync(packageJSONPath)) {
       const packageJSON = JSON.parse(readFileSync(packageJSONPath, { encoding: 'utf-8' }));
       const dependencies = { ...(packageJSON.dependencies || {}), ...(packageJSON.devDependencies || {}) };
-      Object.entries(dependencies).sort((a, b) => a[0] - b[0]).forEach(([key, value]) => {
-        if (value === 'workspace:*' && this.hashJSON[key]) {
-          hasher.update(this.hashJSON[key]);
-        }
-      });
+      const sanitizedDependencies = Object.entries(dependencies)
+        .sort((a,b) => a[0] - b[0])
+        .filter(dep => dep[1] === 'workspace:*')
+        .map(dep => dep[0])
+      this.updateHashWithArray(hasher, sanitizedDependencies)
     }
+  }
+
+  getHash(directoryPath, script, debug, compareWith, constantDeps) {
+    const hasher = createHash('sha256');
+    if (script) hasher.update(script);
+    const directory = readdirSync(directoryPath, { withFileTypes: true });
+    if (constantDeps) this.updateHashWithArray(hasher, constantDeps);
+    else this.updateDependencyHash(hasher, directoryPath);
     directory.forEach(item => {
       if (this.excludeDirs.indexOf(item.name) !== -1) return;
       const itemPath = path.join(directoryPath, item.name);
@@ -59,7 +70,7 @@ class Hasher {
         }
         hasher.update(fileString);
       } else if (item.isDirectory()) {
-        hasher.update(this.getHash(itemPath, script, debug, compareWith));
+        hasher.update(this.getHash(itemPath, script, debug, compareWith, constantDeps));
       }
     });
     return hasher.digest('hex');
