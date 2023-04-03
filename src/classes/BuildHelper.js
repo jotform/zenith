@@ -21,15 +21,16 @@ export default class BuildHelper extends WorkerHelper {
     this.command = command;
   }
 
-  async init({debug, compareWith, compareHash, logAffected}) {
+  async init({debug, compareWith, compareHash, logAffected, debugLocation}) {
     this.cacher = new Cacher().cacher;
     this.compareHash = compareHash;
     this.logAffected = logAffected;
+    this.debugLocation = debugLocation
     this.startTime = process.hrtime();
     if (debug) {
       this.debug = debug;
       this.compareWith = compareWith;
-      const debugJSON = await this.cacher.getDebugFile(compareWith, this.command) || {};
+      const debugJSON = await this.cacher.getDebugFile(compareWith, this.command, debugLocation) || {};
       Hasher.updateDebugJSON(debugJSON);
     }
   }
@@ -175,7 +176,7 @@ export default class BuildHelper extends WorkerHelper {
         Logger.log(2, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
         Logger.log(2, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
         if (this.debug && process.env.ZENITH_DEBUG_ID) {
-          this.cacher.updateDebugFile(Hasher.getDebugJSON(), this.command);
+          this.cacher.updateDebugFile(Hasher.getDebugJSON(), this.command, this.debugLocation);
           Logger.log(2, 'DEBUG JSON UPDATED');
         }
       }

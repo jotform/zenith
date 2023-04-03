@@ -19,6 +19,12 @@ export default class Runner {
         ).choices(['1', '2', '3']).default('2'))
       .addOption(
         new Option(
+          '-dl, --debugLocation <debugLocation>',
+          'Debug Location: sets the prefix of the debug location. By default, it is "debug/", and it usage is as follows: \n {target}/{debugLocation}debug.{hash}.json'
+        ).default('debug/')
+      )
+      .addOption(
+        new Option(
           '-w, --worker <worker>',
           'Worker Number (default = 6): sets the maximum number of workers that run concurrently.'
         ).default('6'));
@@ -44,6 +50,7 @@ export default class Runner {
     if (options.logAffected) {
       this.logAffected = true;
     }
+    this.debugLocation = options.debugLocation;
     this.worker = options.worker;
 
     Logger.setLogLevel(Number(options.logLevel));
@@ -55,7 +62,8 @@ export default class Runner {
       debug: this.debug, 
       compareWith: this.compareWith, 
       compareHash: this.compareHash, 
-      logAffected: this.logAffected
+      logAffected: this.logAffected,
+      debugLocation: this.debugLocation
     });
     Logger.log(2, `Zenith ${this.command} started.`)
     if (this.project === 'all') {
