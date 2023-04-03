@@ -16,8 +16,8 @@ export default class BuildHelper extends WorkerHelper {
   missingProjects = [];
   hashMismatchProjects = [];
 
-  constructor(command) {
-    super(command);
+  constructor(command, worker) {
+    super(command, worker);
     this.command = command;
   }
 
@@ -92,9 +92,16 @@ export default class BuildHelper extends WorkerHelper {
     const root = ConfigHelper.projects[buildProject];
     // TODO: Non cacheable projects control
     const config = ConfigHelper.getConfig(buildProject, root);
-    const {outputs, script} = config[this.command];
+    // default behaviour: if target is not in build config, set output to stdout and script to target itself
+    if (!config[this.command]) {
+      config[this.command] = {
+        outputs: ['stdout'],
+        script: this.command
+      };
+    }
+    const {outputs, script, constantDependencies} = config[this.command];
     const buildPath = path.join(ROOT_PATH, root);
-    const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith);
+    const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
     const isCached = await this.cacher.isCached(hash, root, outputs, script);
     if (this.compareWith) {
       const [changedFiles, newFiles] = Hasher.getUpdatedHashes();
@@ -105,7 +112,6 @@ export default class BuildHelper extends WorkerHelper {
     }
     if (!isCached) {
       Logger.log(3, 'Cache does not exist for => ', buildProject, hash);
-      
       const startTime = process.hrtime();
       const output = await this.execute(buildPath, script, hash, root, outputs, buildProject);
       this.missingProjects.push({ buildProject, time: process.hrtime(startTime)});

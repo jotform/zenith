@@ -23,6 +23,11 @@ export default class Runner {
           'Debug Location: sets the prefix of the debug location. By default, it is "debug/", and it usage is as follows: \n {target}/{debugLocation}debug.{hash}.json'
         ).default('debug/')
       )
+      .addOption(
+        new Option(
+          '-w, --worker <worker>',
+          'Worker Number (default = 6): sets the maximum number of workers that run concurrently.'
+        ).default('6'));
     program.parse(args);
     const options = program.opts();
     this.command = args.slice(-1);
@@ -46,12 +51,13 @@ export default class Runner {
       this.logAffected = true;
     }
     this.debugLocation = options.debugLocation;
+    this.worker = options.worker;
 
     Logger.setLogLevel(Number(options.logLevel));
   }
 
   async run() {
-    const Builder = new BuildHelper(this.command);
+    const Builder = new BuildHelper(this.command, this.worker);
     await Builder.init({
       debug: this.debug, 
       compareWith: this.compareWith, 
