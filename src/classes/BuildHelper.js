@@ -150,7 +150,7 @@ export default class BuildHelper extends WorkerHelper {
     } catch (error) {
       Logger.log(3, "ERR-B1 :: project: ", buildProject, " error: ", error.message);
       await this.pool.terminate(true);
-      // throw error;  
+      throw error;
     }
   }
 
