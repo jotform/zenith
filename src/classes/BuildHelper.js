@@ -164,8 +164,12 @@ export default class BuildHelper extends WorkerHelper {
         Logger.log(2, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
         Logger.log(2, `${this.fromCache} projects used from cache,`);
         Logger.log(2, `${this.built} projects used without cache.`);
-        Logger.log(2, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
-        Logger.log(2, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
+        if (this.missingProjects.length > 0) {
+          Logger.log(2, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
+        }
+        if (this.hashMismatchProjects.length > 0) {
+          Logger.log(2, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
+        }
         Logger.log(2, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
         if (this.debug && process.env.ZENITH_DEBUG_ID) {
           this.cacher.updateDebugFile(Hasher.getDebugJSON(), this.command, this.debugLocation);
