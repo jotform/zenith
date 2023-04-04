@@ -21,8 +21,7 @@ export default class WorkerHelper {
         on: message => Logger.log(3, message)
       })
     } catch (error) {
-      Logger.log(2, error);
-      throw error;
+      return error;
     }
   }
 
@@ -32,8 +31,7 @@ export default class WorkerHelper {
         on: message => Logger.log(3, message)
       });
     } catch (error) {
-      Logger.log(2, error);
-      throw error;
+      return error;
     }
   }
 }

@@ -88,66 +88,70 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async builder(buildProject) {
-    this.totalCount++
-    const root = ConfigHelper.projects[buildProject];
-    // TODO: Non cacheable projects control
-    const config = ConfigHelper.getConfig(buildProject, root);
-    // default behaviour: if target is not in build config, set output to stdout and script to target itself
-    if (!config[this.command]) {
-      config[this.command] = {
-        outputs: ['stdout'],
-        script: this.command
-      };
-    }
-    const {outputs, script, constantDependencies} = config[this.command];
-    const buildPath = path.join(ROOT_PATH, root);
-    const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
-    const isCached = await this.cacher.isCached(hash, root, outputs, script);
-    if (this.compareWith) {
-      const [changedFiles, newFiles] = Hasher.getUpdatedHashes();
-      if (changedFiles.length || newFiles.length) {
-        Logger.log(3, `Hash mismatched: \n Changed files => \n - ${changedFiles.join('\n')} \n New files => \n - ${newFiles.join('\n')}`);
-        Hasher.emptyUpdatedHashes();
+    try {
+      this.totalCount++
+      const root = ConfigHelper.projects[buildProject];
+      // TODO: Non cacheable projects control
+      const config = ConfigHelper.getConfig(buildProject, root);
+      // default behaviour: if target is not in build config, set output to stdout and script to target itself
+      if (!config[this.command]) {
+        config[this.command] = {
+          outputs: ['stdout'],
+          script: this.command
+        };
       }
-    }
-    if (!isCached) {
-      Logger.log(3, 'Cache does not exist for => ', buildProject, hash);
-      const startTime = process.hrtime();
-      const output = await this.execute(buildPath, script, hash, root, outputs, buildProject);
-      this.missingProjects.push({ buildProject, time: process.hrtime(startTime)});
-      if (output instanceof Error) {
-        // process.exit(0);
-        Logger.log(2, 'Error in path ::', buildPath);
-        Logger.log(2, output);
-        throw new Error(output);
+      const {outputs, script, constantDependencies} = config[this.command];
+      const buildPath = path.join(ROOT_PATH, root);
+      const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
+      const isCached = await this.cacher.isCached(hash, root, outputs, script);
+      if (this.compareWith) {
+        const [changedFiles, newFiles] = Hasher.getUpdatedHashes();
+        if (changedFiles.length || newFiles.length) {
+          Logger.log(3, `Hash mismatched: \n Changed files => \n - ${changedFiles.join('\n')} \n New files => \n - ${newFiles.join('\n')}`);
+          Hasher.emptyUpdatedHashes();
+        }
       }
-      if (isOutputTxt(outputs)) {
-        Logger.log(2, output.output)
-      }
-      this.built++
-    } else {
-      if (outputs.length) {
-        for (const output of outputs) {
-          // const outputPath = path.join(ROOT_PATH, root, output);
-          Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
-          const startTime = process.hrtime();
-          const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash, this.logAffected);
-          if (recoverResponse instanceof Error) {
-            throw new Error(recoverResponse);
-          }
-          if (!recoverResponse) {
-            // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
-            await this.execute(buildPath, script, hash, root, outputs, buildProject);
-            this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime)});
-            this.built++
-          } else {
-            this.fromCache++
+      if (!isCached) {
+        Logger.log(3, 'Cache does not exist for => ', buildProject, hash);
+        const startTime = process.hrtime();
+        const output = await this.execute(buildPath, script, hash, root, outputs, buildProject);
+        this.missingProjects.push({ buildProject, time: process.hrtime(startTime)});
+        if (output instanceof Error) {
+          // Error on executing shell command
+          throw output;
+        }
+        if (isOutputTxt(outputs)) {
+          Logger.log(2, output.output)
+        }
+        this.built++
+      } else {
+        if (outputs.length) {
+          for (const output of outputs) {
+            // const outputPath = path.join(ROOT_PATH, root, output);
+            Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
+            const startTime = process.hrtime();
+            const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash, this.logAffected);
+            if (recoverResponse instanceof Error) {
+              throw recoverResponse;
+            }
+            if (!recoverResponse) {
+              // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
+              await this.execute(buildPath, script, hash, root, outputs, buildProject);
+              this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime)});
+              this.built++
+            } else {
+              this.fromCache++
+            }
           }
         }
       }
+      Hasher.hashJSON[buildProject] = hash;
+      this.buildResolver(buildProject);
+    } catch (error) {
+      Logger.log(3, "ERR-B1 :: project: ", buildProject, " error: ", error.message);
+      await this.pool.terminate(true);
+      // throw error;  
     }
-    Hasher.hashJSON[buildProject] = hash;
-    this.buildResolver(buildProject);
   }
 
   build() {

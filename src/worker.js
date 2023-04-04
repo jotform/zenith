@@ -16,7 +16,7 @@ const execute = async (buildPath, targetCommand, hash, root, outputs, projectNam
     }
     return { output: commandOutput };
   } catch (error) {
-    Logger.log(2, error, 'IN EXECUTE TARGET');
+    Logger.log(2, 'ERR-W-E :: output => ', error.stdout);
     return error;
   }
 }
@@ -30,7 +30,7 @@ const anotherJob = async (hash, root, output, target, compareHash, logAffected) 
     workerpool.workerEmit(outputHash === remoteHash ? `Hash hit for ${root}` : `Hashes mismatched for ${root},  ${outputHash} !== ${remoteHash}`);
     return remoteHash === outputHash;
   } catch (error) {
-    Logger.log(2, error, 'IN RECOVERING CACHE');
+    Logger.log(2, 'ERR-W-A :: output => ', error.stdout);
     return error;
   }
 }
