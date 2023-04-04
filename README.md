@@ -92,11 +92,22 @@ The project uses several required environment variables and params. Without them
 ## Optional Parameters
 Below parameters are not required to work, but can be used to modify the tool's behavior.
 ```
+-h, --help: Show parameter information.
 -d, --debug: If given, enters debug mode. Usage is provided in the [debugging](#debugging) section.
+
 -c, --compareWith <string>: Compares and calculates the difference between a given json file and the current build.
+
+-dl, --debugLocation <string>: Debug Location: sets the prefix of the debug location. By default, it is "debug/", and it's usage is as follows: \n {target}/{debugLocation}debug.{hash}.json
+
+-w, --worker <number>: Worker Number (default = 6): sets the maximum number of workers that run concurrently.
+
 -l, --logLevel <1 | 2 | 3>: Sets the log level. 1=silent mode. 2=default mode, only shows errors and stats after completion. 3=verbose mode, logs cache hits, misses, recoveries.
+
+-ch, --noCompareHash: default: false. If false, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.
+
+-la, --logAffected: default: false. If true, will log outputs of ONLY missed caches\' executes.
 ```
 
 
 ## Debugging
-If -d param is given, the tool outputs which files are uploaded. It can be used to see if the tool is working as intended. By also setting -c param, you can compare builds and see which files are new, and changed or removed.
+If -d param is given, the tool outputs a file named "debug.{hash}.json". This file will contain hashes of every file that is used in hashing. It can be used to see if the tool is working as intended, and which folders are being hashed. By also setting -c param, you can compare builds and see which files are new, and changed or removed.
