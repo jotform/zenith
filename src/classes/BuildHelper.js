@@ -144,7 +144,6 @@ export default class BuildHelper extends WorkerHelper {
               this.fromCache++
               const recoveryTime = process.hrtime(startTime)
               const delta = (recoveryTime[0] + recoveryTime[1] / 1e9).toFixed(3)
-              console.log(delta + 's\n')
               if (delta > 10) {
                 this.slowCacheRecoveries.push({ buildProject, time: recoveryTime });
               }
