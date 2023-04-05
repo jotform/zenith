@@ -15,6 +15,7 @@ export default class BuildHelper extends WorkerHelper {
   built = 0;
   missingProjects = [];
   hashMismatchProjects = [];
+  slowCacheRecoveries = [];
 
   constructor(command, worker) {
     super(command, worker);
@@ -112,7 +113,7 @@ export default class BuildHelper extends WorkerHelper {
         }
       }
       if (!isCached) {
-        Logger.log(3, 'Cache does not exist for => ', buildProject, hash);
+        Logger.log(2, 'Cache does not exist for => ', buildProject, hash);
         const startTime = process.hrtime();
         const output = await this.execute(buildPath, script, hash, root, outputs, buildProject);
         this.missingProjects.push({ buildProject, time: process.hrtime(startTime)});
@@ -141,6 +142,12 @@ export default class BuildHelper extends WorkerHelper {
               this.built++
             } else {
               this.fromCache++
+              const recoveryTime = process.hrtime(startTime)
+              const delta = (recoveryTime[0] + recoveryTime[1] / 1e9).toFixed(3)
+              console.log(delta + 's\n')
+              if (delta > 10) {
+                this.slowCacheRecoveries.push({ buildProject, time: recoveryTime });
+              }
             }
           }
         }
@@ -166,6 +173,9 @@ export default class BuildHelper extends WorkerHelper {
         Logger.log(2, `${this.built} projects used without cache.`);
         if (this.missingProjects.length > 0) {
           Logger.log(2, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
+        }
+        if (this.slowCacheRecoveries.length > 0) {
+          Logger.log(2, `Cache recovered slowly for following projects => ${formatMissingProjects(this.slowCacheRecoveries)}`)
         }
         if (this.hashMismatchProjects.length > 0) {
           Logger.log(2, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
