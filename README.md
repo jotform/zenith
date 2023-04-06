@@ -36,49 +36,63 @@ pnpm/yarn/npm zenith --target=("build" | "test") --project=("all" | <project_nam
 Target and project arguments are required for now. Without them, the tool will not work.
 ## zenith.json: What is it and why is it required?
 Zenith looks for a file named "zenith.json" in the same folder where your root package.json file is. This file is used to determine the behavior of Zenith. It MUST include 'projects' and 'buildConfig' keys, and MAY include 'ignore' and 'appDirectories' keys. An example of usage is as follows.
-```
-//zenith.json
+```json
 {
-"projects": {
-"@jotforminc/<app1>":"projects/applications/<app1>",
-"@jotforminc/<app2>":"projects/applications/<app2>",
-"@jotforminc/<lib1>":"projects/libraries/<lib1>"
-},
-"buildConfig": {
-"cachePath": ".customCache",
-"appConfig": {
-"build": {
-"script": "build",
-"outputs": ["build"]
-},
-"lint:js": {
-"script": "lint:js",
-"outputs": ["stdout"],
-"constantDependencies": ["@jotforminc/lib1"]
-}
-},
-"mainConfig": {
-"build": {
-"script": "build",
-"outputs": ["build"]
-},
-"lint:js": {
-"script": "lint:js",
-"outputs": ["stdout"],
-"constantDependencies": ["@jotforminc/lib1", "@jotforminc/lib2"]
-}
-},
-},
-"ignore": [
-"node_modules",
-".gitignore",
-"build",
-"lib",
-"dist",
-".DS_Store",
-"test-results",
-],
-"appDirectories": ["/apps/"],
+    "projects": {
+        "@jotforminc/app1": "projects/applications/app1",
+        "@jotforminc/app2": "projects/applications/app2",
+        "@jotforminc/lib1": "projects/libraries/lib1"
+    },
+    "buildConfig": {
+        "cachePath": ".customCache",
+        "appConfig": {
+            "build": {
+                "script": "build",
+                "outputs": [
+                    "build"
+                ]
+            },
+            "lint:js": {
+                "script": "lint:js",
+                "outputs": [
+                    "stdout"
+                ],
+                "constantDependencies": [
+                    "@jotforminc/lib1"
+                ]
+            }
+        }
+    },
+    "mainConfig": {
+        "build": {
+            "script": "build",
+            "outputs": [
+                "build"
+            ]
+        },
+        "lint:js": {
+            "script": "lint:js",
+            "outputs": [
+                "stdout"
+            ],
+            "constantDependencies": [
+                "@jotforminc/lib1",
+                "@jotforminc/lib2"
+            ]
+        }
+    },
+    "ignore": [
+        "node_modules",
+        ".gitignore",
+        "build",
+        "lib",
+        "dist",
+        ".DS_Store",
+        "test-results"
+    ],
+    "appDirectories": [
+        "/apps/"
+    ]
 }
 ```
 ## Required Parameters
