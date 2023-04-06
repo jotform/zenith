@@ -1,5 +1,5 @@
 # Zenith: New way of JS monorepo builds <!-- omit in toc -->
-Welcome to Zenith, a lightning-fast monorepo build tool designed to minimize your tasks' runtime and maximize your productivity. If you're a monorepo user, you know how challenging it can be to keep track of multiple codebases, dependencies, and versioning across various projects. That's where Zenith comes in: our powerful platform provides a way to manage builds, tests, lints, and other tasks for all your projects, making it easy to achieve CI pipelines that take seconds without even needing any version control, such as Git. With Zenith, you can focus on what really matters - building great software. So whether you're a developer, project manager, or part of a large development team, Zenith is the perfect tool to help you stay fast, efficient, and ahead of the game.
+Welcome to Zenith, a lightning-fast javasript monorepo build tool designed to minimize your tasks' runtime and maximize your productivity. If you're a monorepo user, you know how challenging it can be to keep track of multiple codebases, dependencies, and versioning across various projects. That's where Zenith comes in: our powerful platform provides a way to manage builds, tests, lints, and other tasks for all your projects, making it easy to achieve CI pipelines that take seconds without even needing any version control, such as Git. With Zenith, you can focus on what really matters - building great software. So whether you're a developer, project manager, or part of a large development team, Zenith is the perfect tool to help you stay fast, efficient, and ahead of the game.
 
 
 ## Table of contents <!-- omit in toc -->
@@ -18,11 +18,10 @@ Welcome to Zenith, a lightning-fast monorepo build tool designed to minimize you
 
 Zenith is a fast build tool used for both remote and local caching. Its speed comes from the ability to cache files remotely while not using .git files, which makes Zenith a good choice when developing monorepos with teams. It provides build cache and test cache functionalities, which can be used to deploy a large application much quicker than its competitors.
 
+Zenith requires pnpm as the node package manager.
 
 ## Installation
 ```
-npm i @jotforminc/zenith
-yarn add @jotforminc/zenith
 pnpm add @jotforminc/zenith
 ```
 
@@ -31,7 +30,7 @@ From the terminal, run:
 
 
 ```
-pnpm/yarn/npm zenith --target=("build" | "test") --project=("all" | <project_name>)
+pnpm zenith --target=("build" | "test") --project=("all" | <project_name>)
 ```
 Target and project arguments are required for now. Without them, the tool will not work.
 ## zenith.json: What is it and why is it required?
