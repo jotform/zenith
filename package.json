@@ -14,12 +14,15 @@
     "eslint": "7.32.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.25.2",
+    "@jotforminc/jest-preset-base": "6.10.0",
+    "jest": "27.3.1",
     "rollup": "3.18.0"
   },
   "scripts": {
     "lint": "eslint",
     "test": "true",
-    "build": "rollup -c --bundleConfigAsCjs"
+    "build": "rollup -c --bundleConfigAsCjs",
+    "test:unit": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests"
   },
   "keywords": [],
   "author": "",
