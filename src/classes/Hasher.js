@@ -4,7 +4,7 @@ import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
 import ConfigHelperInstance from './ConfigHelper';
 
-class Hasher {
+export class Hasher {
   hashJSON = {};
   // buildJSONPath = path.join(__dirname, '../build.json');
   changedHash = [];
@@ -16,7 +16,7 @@ class Hasher {
   }
 
   updateDebugJSON(debugJSON) {
-    this.debugJSON = debugJSON;
+    this.debugJSON = { ...debugJSON };
   }
 
   getDebugJSON() {
