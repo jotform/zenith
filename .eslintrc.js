@@ -1,15 +1,3 @@
-export default {
-    "env": {
-        "es2021": true,
-        "node": true
-    },
-    "extends": "airbnb-base",
-    "overrides": [
-    ],
-    "parserOptions": {
-        "ecmaVersion": "latest",
-        "sourceType": "module"
-    },
-    "rules": {
-    }
-}
+module.exports = {
+  extends: '@jotforminc/eslint-config-base-ts'
+};

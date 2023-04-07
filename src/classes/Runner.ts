@@ -1,9 +1,25 @@
 import { Command, Option } from 'commander';
 import BuildHelper from './BuildHelper';
-import Logger from '../utils/logger'
+import Logger from '../utils/logger';
 
 export default class Runner {
-  constructor(...args) {
+  project = '';
+
+  command = '';
+
+  compareWith = '';
+
+  debug = false;
+
+  compareHash = true;
+
+  logAffected = false;
+
+  debugLocation = 'debug/';
+
+  worker = '6';
+
+  constructor(...args: readonly string[]) {
     const program = new Command();
     program
       .option('-p, --project <project>', 'Project name')
@@ -16,7 +32,8 @@ export default class Runner {
         new Option(
           '-l, --logLevel <logLevel>',
           'Log Level [1-2-3]: 1=silent, 2=default (log info after completion and errors), 3=verbose (missing/hit cache info'
-        ).choices(['1', '2', '3']).default('2'))
+        ).choices(['1', '2', '3']).default('2')
+      )
       .addOption(
         new Option(
           '-dl, --debugLocation <debugLocation>',
@@ -27,10 +44,10 @@ export default class Runner {
         new Option(
           '-w, --worker <worker>',
           'Worker Number (default = 6): sets the maximum number of workers that run concurrently.'
-        ).default('6'));
+        ).default('6')
+      );
     program.parse(args);
     const options = program.opts();
-    this.command = args.slice(-1);
     if (options.project) {
       this.project = options.project;
     }
@@ -43,7 +60,6 @@ export default class Runner {
     if (options.compareWith) {
       this.compareWith = options.compareWith;
     }
-    this.compareHash = true
     if (options.noCompareHash) {
       this.compareHash = false;
     }
@@ -56,16 +72,16 @@ export default class Runner {
     Logger.setLogLevel(Number(options.logLevel));
   }
 
-  async run() {
+  async run(): Promise<void> {
     const Builder = new BuildHelper(this.command, this.worker);
     await Builder.init({
-      debug: this.debug, 
-      compareWith: this.compareWith, 
-      compareHash: this.compareHash, 
+      debug: this.debug,
+      compareWith: this.compareWith,
+      compareHash: this.compareHash,
       logAffected: this.logAffected,
       debugLocation: this.debugLocation
     });
-    Logger.log(2, `Zenith ${this.command} started.`)
+    Logger.log(2, `Zenith ${this.command} started.`);
     if (this.project === 'all') {
       Builder.buildAll();
     } else {
