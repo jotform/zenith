@@ -16,7 +16,7 @@ export default class WorkerHelper {
       // workerpool sets workers to total cpu - 1 if maxWorkers is undefined.
       ...(worker === 'max' ? {} : { maxWorkers: Number(worker) })
     };
-    this.pool = workerpool.pool(`${__dirname}/worker.js`, workerConfig);
+    this.pool = workerpool.pool(`${__dirname}/../worker.js`, workerConfig);
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 

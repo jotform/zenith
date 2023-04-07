@@ -7,7 +7,6 @@ import { ROOT_PATH } from './utils/constants';
 const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string) => {
   try {
     workerpool.workerEmit(`Running ${targetCommand} command for => ${buildPath.split('/').pop()}`);
-    // TODO: anything better than substr
     const commandOutput = execSync(`pnpm --filter ${projectName} ${targetCommand}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
     await Promise.all(outputs.map(output => RemoteCacher.cache(hash, root, output, targetCommand, commandOutput)));
     await Promise.all(outputs.map(output => RemoteCacher.sendOutputHash(hash, root, output, targetCommand)));
@@ -16,7 +15,6 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     }
     return { output: commandOutput };
   } catch (error) {
-    console.log('type of error:::', typeof error);
     if (error instanceof Error) Logger.log(2, 'ERR-W-E :: output => ', error.message);
     else Logger.log(2, 'ERR-W-E :: output => ', error);
     return error;
