@@ -11,6 +11,7 @@
     "zenith": "./build/index.js"
   },
   "devDependencies": {
+    "@jotforminc/eslint-config-base-ts": "^6.10.0",
     "@swc/jest": "0.2.21",
     "@swc/core": "1.2.197",
     "identity-obj-proxy": "3.0.0",
@@ -32,7 +33,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.282.0",
     "@aws-sdk/types": "^3.306.0",
-    "@jotforminc/eslint-config-base-ts": "^6.10.0",
     "@types/node": "^18.15.11",
     "@types/workerpool": "^6.4.0",
     "commander": "10.0.0",
