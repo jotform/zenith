@@ -22,7 +22,7 @@
   },
   "scripts": {
     "lint": "eslint",
-    "build": "rollup -c --bundleConfigAsCjs",
+    "build": "tsc --build",
     "test": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests",
     "tsc:w": "tsc -w"
   },
