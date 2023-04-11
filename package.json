@@ -1,7 +1,7 @@
 {
   "name": "@jotforminc/zenith",
   "packageManager": "pnpm@7.18.0",
-  "version": "0.8.0",
+  "version": "0.8.0-typescript",
   "description": "",
   "main": "./build/index.js",
   "files": [
@@ -11,28 +11,35 @@
     "zenith": "./build/index.js"
   },
   "devDependencies": {
-    "@swc/jest": "0.2.21",
     "@swc/core": "1.2.197",
-    "identity-obj-proxy": "3.0.0",
-    "eslint": "7.32.0",
+    "@swc/jest": "0.2.21",
+    "@typescript-eslint/eslint-plugin": "^5.57.1",
+    "@typescript-eslint/parser": "^5.57.1",
+    "eslint": "^8.38.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.25.2",
+    "identity-obj-proxy": "3.0.0",
     "jest": "27.3.1",
     "rollup": "3.18.0"
   },
   "scripts": {
     "lint": "eslint",
-    "build": "rollup -c --bundleConfigAsCjs",
-    "test": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests"
+    "build": "tsc --build",
+    "test": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests",
+    "tsc:w": "tsc -w"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "3.282.0",
+    "@aws-sdk/types": "^3.306.0",
+    "@types/node": "^18.15.11",
+    "@types/workerpool": "^6.4.0",
     "commander": "10.0.0",
+    "typescript": "^5.0.4",
     "unzipper": "0.10.11",
-    "zip-local": "0.3.5",
-    "workerpool": "6.4.0"
+    "workerpool": "6.4.0",
+    "zip-local": "0.3.5"
   }
 }

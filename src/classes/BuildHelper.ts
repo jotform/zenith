@@ -6,27 +6,54 @@ import Hasher from './Hasher';
 import WorkerHelper from './WorkerHelper';
 import ConfigHelper from './ConfigHelper';
 import { formatMissingProjects, formatTimeDiff, isOutputTxt } from '../utils/functions';
-import Logger from '../utils/logger'
+import Logger from '../utils/logger';
+import { ProjectStats, BuildParams } from '../types/BuildTypes';
+import LocalCacher from './LocalCacher';
+import RemoteCacherInstance from './RemoteCacher';
 
 export default class BuildHelper extends WorkerHelper {
-  projects = new Map();
-  totalCount = 0;
-  fromCache = 0;
-  built = 0;
-  missingProjects = [];
-  hashMismatchProjects = [];
-  slowCacheRecoveries = [];
+  projects : Map<string, Set<string>> = new Map();
 
-  constructor(command, worker) {
+  command : string;
+
+  totalCount = 0;
+
+  fromCache = 0;
+
+  built = 0;
+
+  missingProjects : Array<ProjectStats> = [];
+
+  hashMismatchProjects : Array<ProjectStats> = [];
+
+  slowCacheRecoveries : Array<ProjectStats> = [];
+
+  compareHash = true;
+
+  logAffected = false;
+
+  debugLocation = 'debug/'
+
+  startTime: [number, number] = [0, 0];
+
+  debug = false;
+
+  compareWith = '';
+
+  cacher: typeof RemoteCacherInstance | LocalCacher = new LocalCacher();
+
+  constructor(command : string, worker : string) {
     super(command, worker);
     this.command = command;
   }
 
-  async init({debug, compareWith, compareHash, logAffected, debugLocation}) {
+  async init({
+    debug, compareWith, compareHash, logAffected, debugLocation
+  }: BuildParams) : Promise<void> {
     this.cacher = new Cacher().cacher;
     this.compareHash = compareHash;
     this.logAffected = logAffected;
-    this.debugLocation = debugLocation
+    this.debugLocation = debugLocation;
     this.startTime = process.hrtime();
     if (debug) {
       this.debug = debug;
@@ -36,10 +63,10 @@ export default class BuildHelper extends WorkerHelper {
     }
   }
 
-  addProject(project) {
+  addProject(project: string): void {
     if (!this.projects.has(project) && project && ConfigHelper.projects[project]) {
       try {
-        const root = ConfigHelper.projects[project] || {};
+        const root = ConfigHelper.projects[project] || '';
         const packageJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, root, 'package.json'), { encoding: 'utf-8' }));
         const dependencyArray = Object.keys({ ...packageJSON.dependencies, ...packageJSON.devDependencies });
         this.projects.set(project, new Set(dependencyArray.filter(i => ConfigHelper.projects[i])));
@@ -47,7 +74,7 @@ export default class BuildHelper extends WorkerHelper {
           this.addProject(dependency);
         });
       } catch (error) {
-        if (error.code === 'ENOENT') {
+        if (error instanceof Error) {
           Logger.log(2, 'Package.json file not found in the project!');
           throw error;
         } else {
@@ -57,14 +84,14 @@ export default class BuildHelper extends WorkerHelper {
     }
   }
 
-  buildAll() {
+  buildAll(): void {
     const allProjects = ConfigHelper.projects;
     Object.keys(allProjects).forEach(project => {
       this.addProject(project);
-    })
+    });
   }
 
-  removeProject(dependency) {
+  removeProject(dependency: string): void {
     this.projects.delete(dependency);
     this.projects.forEach(project => {
       if (project.has(dependency)) {
@@ -73,8 +100,8 @@ export default class BuildHelper extends WorkerHelper {
     });
   }
 
-  get dependencyFreeProjects() {
-    const list = [];
+  get dependencyFreeProjects(): Array<string> {
+    const list: Array<string> = [];
     this.projects.forEach((value, key) => {
       if (!Array.from(value).length) {
         list.push(key);
@@ -83,14 +110,15 @@ export default class BuildHelper extends WorkerHelper {
     return list;
   }
 
-  buildResolver(project) {
+  buildResolver(project: string): void {
     this.removeProject(project);
     this.build();
   }
 
-  async builder(buildProject) {
+  // eslint-disable-next-line
+  async builder(buildProject: string) {
     try {
-      this.totalCount++
+      this.totalCount++;
       const root = ConfigHelper.projects[buildProject];
       // TODO: Non cacheable projects control
       const config = ConfigHelper.getConfig(buildProject, root);
@@ -101,7 +129,7 @@ export default class BuildHelper extends WorkerHelper {
           script: this.command
         };
       }
-      const {outputs, script, constantDependencies} = config[this.command];
+      const { outputs, script, constantDependencies } = config[this.command];
       const buildPath = path.join(ROOT_PATH, root);
       const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
       const isCached = await this.cacher.isCached(hash, root, outputs, script);
@@ -116,37 +144,38 @@ export default class BuildHelper extends WorkerHelper {
         Logger.log(2, 'Cache does not exist for => ', buildProject, hash);
         const startTime = process.hrtime();
         const output = await this.execute(buildPath, script, hash, root, outputs, buildProject);
-        this.missingProjects.push({ buildProject, time: process.hrtime(startTime)});
+        this.missingProjects.push({ buildProject, time: process.hrtime(startTime) });
         if (output instanceof Error) {
           // Error on executing shell command
           throw output;
         }
-        if (isOutputTxt(outputs)) {
-          Logger.log(2, output.output)
+        if (output && isOutputTxt(outputs)) {
+          Logger.log(2, output.output);
         }
-        this.built++
-      } else {
-        if (outputs.length) {
-          for (const output of outputs) {
-            // const outputPath = path.join(ROOT_PATH, root, output);
-            Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
-            const startTime = process.hrtime();
-            const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash, this.logAffected);
-            if (recoverResponse instanceof Error) {
-              throw recoverResponse;
-            }
-            if (!recoverResponse) {
-              // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
-              await this.execute(buildPath, script, hash, root, outputs, buildProject);
-              this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime)});
-              this.built++
-            } else {
-              this.fromCache++
-              const recoveryTime = process.hrtime(startTime)
-              const delta = (recoveryTime[0] + recoveryTime[1] / 1e9).toFixed(3)
-              if (delta > 10) {
-                this.slowCacheRecoveries.push({ buildProject, time: recoveryTime });
-              }
+        this.built++;
+      } else if (outputs.length) {
+        // eslint-disable-next-line
+        for (const output of outputs) {
+          // const outputPath = path.join(ROOT_PATH, root, output);
+          Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
+          const startTime = process.hrtime();
+          // eslint-disable-next-line no-await-in-loop
+          const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash, this.logAffected);
+          if (recoverResponse instanceof Error) {
+            throw recoverResponse;
+          }
+          if (!recoverResponse) {
+            // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
+            // eslint-disable-next-line no-await-in-loop
+            await this.execute(buildPath, script, hash, root, outputs, buildProject);
+            this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime) });
+            this.built++;
+          } else {
+            this.fromCache++;
+            const recoveryTime = process.hrtime(startTime);
+            const delta = Number((recoveryTime[0] + recoveryTime[1] / 1e9).toFixed(3));
+            if (delta > 10) {
+              this.slowCacheRecoveries.push({ buildProject, time: recoveryTime });
             }
           }
         }
@@ -154,19 +183,21 @@ export default class BuildHelper extends WorkerHelper {
       Hasher.hashJSON[buildProject] = hash;
       this.buildResolver(buildProject);
     } catch (error) {
-      Logger.log(3, "ERR-B1 :: project: ", buildProject, " error: ", error.message);
-      await this.pool.terminate(true);
-      throw error;
+      if (error instanceof Error) {
+        Logger.log(3, 'ERR-B1 :: project: ', buildProject, ' error: ', error.message);
+        await this.pool.terminate(true);
+        throw error;
+      } else throw new Error('Builder failed.');
     }
   }
 
-  build() {
+  build(): void {
     const projects = this.dependencyFreeProjects;
     const stats = this.pool.stats();
     if (!projects.length) {
       if (!stats.pendingTasks && !stats.activeTasks) {
         this.pool.terminate();
-        Logger.log(2, `Zenith completed command: ${this.command}.`)
+        Logger.log(2, `Zenith completed command: ${this.command}.`);
         Logger.log(2, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
         Logger.log(2, `${this.fromCache} projects used from cache,`);
         Logger.log(2, `${this.built} projects used without cache.`);
@@ -174,7 +205,7 @@ export default class BuildHelper extends WorkerHelper {
           Logger.log(2, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
         }
         if (this.slowCacheRecoveries.length > 0) {
-          Logger.log(2, `Cache recovered slowly for following projects => ${formatMissingProjects(this.slowCacheRecoveries)}`)
+          Logger.log(2, `Cache recovered slowly for following projects => ${formatMissingProjects(this.slowCacheRecoveries)}`);
         }
         if (this.hashMismatchProjects.length > 0) {
           Logger.log(2, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
@@ -187,6 +218,7 @@ export default class BuildHelper extends WorkerHelper {
       }
       return;
     }
+    // eslint-disable-next-line no-restricted-syntax
     for (const eachProject of projects) {
       if (!this.started.has(eachProject)) {
         this.started.add(eachProject);
