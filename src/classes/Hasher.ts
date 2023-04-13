@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, existsSync } from 'fs';
 import * as path from 'path';
 import ConfigHelperInstance from './ConfigHelper';
 import { DebugJSON } from '../types/ConfigTypes';
+import { isEmpty } from '../utils/functions';
 
 export class Hasher {
   // buildJSONPath = path.join(__dirname, '../build.json');
@@ -79,7 +80,7 @@ export class Hasher {
           this.debugJSON[itemPath] = debugHash;
         }
         hasher.update(fileString);
-      } else if (item.isDirectory()) {
+      } else if (item.isDirectory() && !isEmpty(itemPath)) {
         const dirHash = this.getHash(itemPath, script, debug, compareWith, constantDeps, false);
         if (dirHash) hasher.update(dirHash);
       }
