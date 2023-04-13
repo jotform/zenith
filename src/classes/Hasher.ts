@@ -76,7 +76,7 @@ export class Hasher {
           this.debugJSON[itemPath] = debugHash;
         }
         hasher.update(fileString);
-      } else if (item.isDirectory()) {
+      } else if (item.isDirectory() && readdirSync(itemPath).length) {
         hasher.update(this.getHash(itemPath, script, debug, compareWith, constantDeps));
       }
     });
