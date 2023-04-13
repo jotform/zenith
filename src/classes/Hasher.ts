@@ -49,12 +49,15 @@ export class Hasher {
     }
   }
 
-  getHash(directoryPath: string, script?: string, debug?: boolean, compareWith?: string, constantDeps?: Array<string>): string {
+  getHash(directoryPath: string, script?: string, debug?: boolean, compareWith?: string, constantDeps?: Array<string>, isFirst = true): string {
     const hasher = createHash('sha256');
-    if (script) hasher.update(script);
+    if (isFirst && script) hasher.update(script);
     const directory = readdirSync(directoryPath, { withFileTypes: true });
-    if (constantDeps) this.updateHashWithArray(hasher, constantDeps);
-    else this.updateDependencyHash(hasher, directoryPath);
+    if (directory.length === 0) return '';
+    if (isFirst) {
+      if (constantDeps) this.updateHashWithArray(hasher, constantDeps);
+      else this.updateDependencyHash(hasher, directoryPath);
+    }
     directory.forEach(item => {
       if (this.excludeDirs.indexOf(item.name) !== -1) return;
       const itemPath = path.join(directoryPath, item.name);
@@ -76,8 +79,9 @@ export class Hasher {
           this.debugJSON[itemPath] = debugHash;
         }
         hasher.update(fileString);
-      } else if (item.isDirectory() && readdirSync(itemPath).length) {
-        hasher.update(this.getHash(itemPath, script, debug, compareWith, constantDeps));
+      } else if (item.isDirectory()) {
+        const dirHash = this.getHash(itemPath, script, debug, compareWith, constantDeps, false);
+        if (dirHash) hasher.update(dirHash);
       }
     });
     return hasher.digest('hex');
