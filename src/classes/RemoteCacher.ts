@@ -181,7 +181,6 @@ class RemoteCacher {
     });
   }
 
-  // TODO: dont return hash
   txtPipeEnd(stream: Readable) {
     const chunks: Array<Buffer> = [];
     return new Promise((resolve, reject) => {
