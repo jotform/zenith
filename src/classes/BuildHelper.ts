@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { readFileSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
@@ -10,6 +11,7 @@ import Logger from '../utils/logger';
 import { ProjectStats, BuildParams } from '../types/BuildTypes';
 import LocalCacher from './LocalCacher';
 import RemoteCacherInstance from './RemoteCacher';
+import { configManagerInstance } from '../config';
 
 export default class BuildHelper extends WorkerHelper {
   projects : Map<string, Set<string>> = new Map();
@@ -211,7 +213,7 @@ export default class BuildHelper extends WorkerHelper {
           Logger.log(2, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
         }
         Logger.log(2, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
-        if (this.debug && process.env.ZENITH_DEBUG_ID) {
+        if (this.debug && configManagerInstance.getConfigValue('ZENITH_DEBUG_ID')) {
           this.cacher.updateDebugFile(Hasher.getDebugJSON(), this.command, this.debugLocation);
           Logger.log(2, 'DEBUG JSON UPDATED');
         }

@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Command, Option } from 'commander';
 import BuildHelper from './BuildHelper';
 import Logger from '../utils/logger';
+import { configManagerInstance } from '../config';
 
 export default class Runner {
   project = '';
@@ -55,7 +57,7 @@ export default class Runner {
       this.command = options.target;
     }
     if (options.debug) {
-      this.debug = true;
+      configManagerInstance.updateConfig({ ZENITH_DEBUG: true });
     }
     if (options.compareWith) {
       this.compareWith = options.compareWith;
@@ -75,7 +77,7 @@ export default class Runner {
   async run(): Promise<void> {
     const Builder = new BuildHelper(this.command, this.worker);
     await Builder.init({
-      debug: this.debug,
+      debug: configManagerInstance.getConfigValue('ZENITH_DEBUG'),
       compareWith: this.compareWith,
       compareHash: this.compareHash,
       logAffected: this.logAffected,

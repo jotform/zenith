@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import RemoteCacher from './classes/RemoteCacher';
 import Logger from './utils/logger';
 import { ROOT_PATH } from './utils/constants';
+import { configManagerInstance } from './config';
 
 const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string) => {
   try {
@@ -10,7 +11,7 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     const commandOutput = execSync(`pnpm --filter ${projectName} ${targetCommand}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
     await Promise.all(outputs.map(output => RemoteCacher.cache(hash, root, output, targetCommand, commandOutput)));
     await Promise.all(outputs.map(output => RemoteCacher.sendOutputHash(hash, root, output, targetCommand)));
-    if (!process.env.ZENITH_READ_ONLY) {
+    if (!configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) {
       workerpool.workerEmit(`Files cached ${root}`);
     }
     return { output: commandOutput };
