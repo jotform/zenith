@@ -5,7 +5,8 @@
   "description": "",
   "main": "./build/index.js",
   "files": [
-    "build"
+    "build",
+    "README.md"
   ],
   "bin": {
     "zenith": "./build/index.js"
