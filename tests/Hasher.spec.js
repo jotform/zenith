@@ -61,7 +61,7 @@ const generateFileTree = (prefix, depth, fanout) => {
   return numberOfFiles;
 }
 
-const hash = (data) => {
+const hashData = (data) => {
   return createHash('sha256').update(data).digest('hex');
 }
 
@@ -130,8 +130,9 @@ describe("hasher basic functionality", () => {
     const mockFileData = "// Test Mock File";
     writeFileSync(mockFilePath, mockFileData);
     // get hash, and empty updated hashes
-    HasherInstance.getHash(mocksFolderPath, "", true, true);
-    HasherInstance.emptyUpdatedHashes();
+    HasherInstance.updateDebugJSON(
+      {[mockFilePath]: hashData(mockFileData)}
+    )
 
     // update mock file
     const newMockFile = mockFileData + "\n // test comment";
