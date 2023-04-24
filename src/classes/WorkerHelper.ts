@@ -2,6 +2,7 @@ import workerpool from 'workerpool';
 import ConfigHelper from './ConfigHelper';
 import Logger from '../utils/logger';
 import { BuildConfig } from '../types/ConfigTypes';
+import { exec } from 'child_process';
 
 export default class WorkerHelper {
   started : Set<string> = new Set();
@@ -20,11 +21,14 @@ export default class WorkerHelper {
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 
-  async execute(buildPath: string, command: string, hash: string, root: string, outputs: Array<string>, projectName: string) : Promise<Record<string, string> | Error> {
+  async execute(buildPath: string, command: string, hash: string, root: string, outputs: Array<string>, projectName: string) : Promise<{[output: string]: string } | Error> {
     try {
-      return await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName], {
+      const execution =  await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName], {
         on: message => Logger.log(3, message)
-      });
+      }) as {[output: string]: string} | Error;
+      if (execution instanceof Error) throw new Error('Executing worker failed')
+      return execution;
+
     } catch (error) {
       if (error instanceof Error) return error;
       throw new Error('Executing worker failed');
@@ -35,7 +39,7 @@ export default class WorkerHelper {
     try {
       return await this.pool.exec('anotherJob', [hash, root, output, target, compareHashes, logAffected], {
         on: message => Logger.log(3, message)
-      });
+      }) as boolean | Error;
     } catch (error) {
       return error;
     }

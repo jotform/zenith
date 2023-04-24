@@ -1,6 +1,6 @@
 import { SAVE_AS_TXT_KEYWORD } from './constants';
 import { ProjectStats } from '../types/BuildTypes';
-import { Dirent, readdirSync, statSync } from 'fs';
+import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
 export const formatTimeDiff = (time: [number, number]): string => {

@@ -27,7 +27,7 @@ class RemoteCacher {
     });
   }
 
-  async getDebugFile(compareWith: string, target: string, debugLocation: string) {
+  async getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>>{
     if (compareWith) {
       const debugFilePath = `${target}/${debugLocation}debug.${compareWith}.json`;
       try {
@@ -37,12 +37,13 @@ class RemoteCacher {
         });
         if (response.Body === undefined) throw Error('debug JSON was undefined');
         const debugFileString = await response.Body.transformToString();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return JSON.parse(debugFileString);
+        return JSON.parse(debugFileString) as Record<string, string>;
       } catch (error) {
         Logger.log(2, error);
+        return {};
       }
     }
+    return {};
   }
 
   updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string) {
@@ -183,7 +184,7 @@ class RemoteCacher {
     });
   }
 
-  txtPipeEnd(stream: Readable) {
+  txtPipeEnd(stream: Readable): Promise<string> {
     const chunks: Array<Buffer> = [];
     return new Promise((resolve, reject) => {
       stream.on('data', (chunk: Buffer) => { chunks.push(Buffer.from(chunk)); });
@@ -195,7 +196,7 @@ class RemoteCacher {
     });
   }
 
-  async recoverFromCache(originalHash: string, root: string, output: string, target: string, logAffected: boolean) {
+  async recoverFromCache(originalHash: string, root: string, output: string, target: string, logAffected: boolean): Promise<string | void> {
     const isStdOut = isOutputTxt(output);
     const remotePath = `${target}/${originalHash}/${root}/${output}.${isStdOut ? 'txt' : 'zip'}`;
     try {

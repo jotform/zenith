@@ -8,7 +8,7 @@ import WorkerHelper from './WorkerHelper';
 import ConfigHelper from './ConfigHelper';
 import { formatMissingProjects, formatTimeDiff, isOutputTxt } from '../utils/functions';
 import Logger from '../utils/logger';
-import { ProjectStats, BuildParams } from '../types/BuildTypes';
+import { ProjectStats, BuildParams, PackageJsonType } from '../types/BuildTypes';
 import LocalCacher from './LocalCacher';
 import RemoteCacherInstance from './RemoteCacher';
 import { configManagerInstance } from '../config';
@@ -69,8 +69,9 @@ export default class BuildHelper extends WorkerHelper {
     if (!this.projects.has(project) && project && ConfigHelper.projects[project]) {
       try {
         const root = ConfigHelper.projects[project] || '';
-        const packageJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, root, 'package.json'), { encoding: 'utf-8' }));
-        const dependencyArray = Object.keys({ ...packageJSON.dependencies, ...packageJSON.devDependencies });
+        const packageJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, root, 'package.json'), { encoding: 'utf-8' })) as PackageJsonType;
+        const allDependencies: Record<string, string> = { ...packageJSON.dependencies, ...packageJSON.devDependencies }
+        const dependencyArray = Object.keys(allDependencies);
         this.projects.set(project, new Set(dependencyArray.filter(i => ConfigHelper.projects[i])));
         dependencyArray.forEach(dependency => {
           this.addProject(dependency);
@@ -131,7 +132,7 @@ export default class BuildHelper extends WorkerHelper {
           script: this.command
         };
       }
-      const { outputs, script, constantDependencies } = config[this.command];
+      const { outputs, script, constantDependencies, compareRemoteHashes } = config[this.command];
       const buildPath = path.join(ROOT_PATH, root);
       const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
       const isCached = await this.cacher.isCached(hash, root, outputs, script);
@@ -162,7 +163,7 @@ export default class BuildHelper extends WorkerHelper {
           Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
           const startTime = process.hrtime();
           // eslint-disable-next-line no-await-in-loop
-          const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash, this.logAffected);
+          const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash && !!compareRemoteHashes, this.logAffected);
           if (recoverResponse instanceof Error) {
             throw recoverResponse;
           }
@@ -198,7 +199,7 @@ export default class BuildHelper extends WorkerHelper {
     const stats = this.pool.stats();
     if (!projects.length) {
       if (!stats.pendingTasks && !stats.activeTasks) {
-        this.pool.terminate();
+        void this.pool.terminate()
         Logger.log(2, `Zenith completed command: ${this.command}.`);
         Logger.log(2, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
         Logger.log(2, `${this.fromCache} projects used from cache,`);
@@ -224,7 +225,7 @@ export default class BuildHelper extends WorkerHelper {
     for (const eachProject of projects) {
       if (!this.started.has(eachProject)) {
         this.started.add(eachProject);
-        this.builder(eachProject);
+        void this.builder(eachProject);
       }
     }
   }

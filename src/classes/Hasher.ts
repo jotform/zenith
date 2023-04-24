@@ -4,6 +4,7 @@ import * as path from 'path';
 import ConfigHelperInstance from './ConfigHelper';
 import { DebugJSON } from '../types/ConfigTypes';
 import { isEmpty } from '../utils/functions';
+import { PackageJsonType } from '../types/BuildTypes';
 
 export class Hasher {
   // buildJSONPath = path.join(__dirname, '../build.json');
@@ -40,7 +41,7 @@ export class Hasher {
   updateDependencyHash(hasher: Hash, directoryPath: string): void {
     const packageJSONPath = path.join(directoryPath, 'package.json');
     if (existsSync(packageJSONPath)) {
-      const packageJSON = JSON.parse(readFileSync(packageJSONPath, { encoding: 'utf-8' }));
+      const packageJSON = JSON.parse(readFileSync(packageJSONPath, { encoding: 'utf-8' })) as PackageJsonType;
       const dependencies = { ...(packageJSON.dependencies || {}), ...(packageJSON.devDependencies || {}) };
       const sanitizedDependencies = Object.entries(dependencies)
         .sort((a, b) => (a > b ? -1 : 1))
