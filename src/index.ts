@@ -6,7 +6,9 @@ const run = async () => {
     const RunnerHelper = new Runner(...args);
     await RunnerHelper.run();
   } catch (error) {
-    console.error(error);
+    console.log('ERR => R-I ::');
+    if (error instanceof Error) throw error;
+    throw String(error);
   }
 };
 
