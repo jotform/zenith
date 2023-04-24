@@ -2,7 +2,7 @@ import { readFileSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
 import {
-  ProjectConfig, BuildConfig, TargetObject
+  ProjectConfig, BuildConfig, TargetObject, ZenithConfigType
 } from '../types/ConfigTypes';
 
 class ConfigHelper {
@@ -15,7 +15,7 @@ class ConfigHelper {
   appDirectories: Array<string>;
 
   constructor() {
-    const config = JSON.parse(readFileSync(path.join(ROOT_PATH, 'zenith.json'), { encoding: 'utf-8' }));
+    const config = JSON.parse(readFileSync(path.join(ROOT_PATH, 'zenith.json'), { encoding: 'utf-8' })) as ZenithConfigType;
     this.buildConfigJSON = config.buildConfig;
     this.projects = config.projects;
     this.ignoreFiles = config.ignore;

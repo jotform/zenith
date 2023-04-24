@@ -10,3 +10,19 @@ export interface BuildParams {
   logAffected: boolean;
   debugLocation: string;
 }
+
+export interface PackageJsonType {
+  name: string,
+  author: string,
+  license: string,
+  packageManager: string,
+  version: string,
+  description: string,
+  main: string,
+  keywords: string[],
+  bin: Record<string, string>,
+  dependencies: object,
+  devDependencies: object,
+  files: string[],
+  scripts: Record<string,string>,
+}
