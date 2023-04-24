@@ -1,7 +1,7 @@
 {
   "name": "@jotforminc/zenith",
   "packageManager": "pnpm@7.18.0",
-  "version": "0.8.3",
+  "version": "0.8.4",
   "description": "",
   "main": "./build/index.js",
   "files": [
@@ -27,7 +27,7 @@
     "rollup": "3.18.0"
   },
   "scripts": {
-    "lint": "eslint",
+    "lint": "eslint src/",
     "build": "tsc --build",
     "test": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests",
     "tsc:w": "tsc -w"

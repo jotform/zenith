@@ -34,7 +34,7 @@ export default class BuildHelper extends WorkerHelper {
 
   logAffected = false;
 
-  debugLocation = 'debug/'
+  debugLocation = 'debug/';
 
   startTime: [number, number] = [0, 0];
 
@@ -70,7 +70,7 @@ export default class BuildHelper extends WorkerHelper {
       try {
         const root = ConfigHelper.projects[project] || '';
         const packageJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, root, 'package.json'), { encoding: 'utf-8' })) as PackageJsonType;
-        const allDependencies: Record<string, string> = { ...packageJSON.dependencies, ...packageJSON.devDependencies }
+        const allDependencies: Record<string, string> = { ...packageJSON.dependencies, ...packageJSON.devDependencies };
         const dependencyArray = Object.keys(allDependencies);
         this.projects.set(project, new Set(dependencyArray.filter(i => ConfigHelper.projects[i])));
         dependencyArray.forEach(dependency => {
@@ -199,7 +199,7 @@ export default class BuildHelper extends WorkerHelper {
     const stats = this.pool.stats();
     if (!projects.length) {
       if (!stats.pendingTasks && !stats.activeTasks) {
-        void this.pool.terminate()
+        void this.pool.terminate();
         Logger.log(2, `Zenith completed command: ${this.command}.`);
         Logger.log(2, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
         Logger.log(2, `${this.fromCache} projects used from cache,`);

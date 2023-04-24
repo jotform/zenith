@@ -2,7 +2,6 @@ import workerpool from 'workerpool';
 import ConfigHelper from './ConfigHelper';
 import Logger from '../utils/logger';
 import { BuildConfig } from '../types/ConfigTypes';
-import { exec } from 'child_process';
 
 export default class WorkerHelper {
   started : Set<string> = new Set();
@@ -26,7 +25,7 @@ export default class WorkerHelper {
       const execution =  await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName], {
         on: message => Logger.log(3, message)
       }) as {[output: string]: string} | Error;
-      if (execution instanceof Error) throw new Error('Executing worker failed')
+      if (execution instanceof Error) throw new Error('Executing worker failed');
       return execution;
 
     } catch (error) {

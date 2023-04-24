@@ -39,4 +39,4 @@ class ConfigManager {
   }
 }
 
-export const configManagerInstance = new ConfigManager()
+export const configManagerInstance = new ConfigManager();
