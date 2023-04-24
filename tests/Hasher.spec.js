@@ -1,93 +1,11 @@
 import * as path from "path";
 import {
-  readFileSync, unlinkSync, writeFileSync, existsSync, mkdirSync, rmdirSync, write, readdirSync, rmSync
+  writeFileSync, existsSync, mkdirSync, rmdirSync, rmSync
 } from "fs";
 import { Hasher } from "../src/classes/Hasher";
-import { createHash } from 'crypto';
-
-const genStr = (_size) => {
-  const size = Math.floor(Math.random() * _size) + 3;
-  const randomString = Math.random().toString(36).substring(2, size);
-  return randomString;
-}
-
-const generateFile = (prefix, index) => {
-  const fileName = `${genStr(100)}_${index}.js`;
-  const filePath = path.join(prefix, fileName);
-  const fileData = genStr(1000);
-
-  writeFileSync(filePath, fileData);
-
-  return filePath;
-}
-
-const updateFileContents = (filePath) => {
-  const newData = genStr(1000);
-  const oldData = readFileSync(filePath, { encoding: 'utf8' });
-  writeFileSync(filePath, oldData + newData);
-}
-
-
-const generateDirectory = (prefix) => {
-  const dirName = genStr(100);
-  const dirPath = path.join(prefix, dirName);
-
-  if (!existsSync(dirPath)) {
-    mkdirSync(dirPath, { recursive: true,  });
-  }
-  return dirPath;
-}
-
-
-const generateFileTree = (prefix, depth, fanout) => {
-  if (depth === 0) {
-    return 0;
-  }
-
-  let numberOfFiles = 0;
-
-  for (let i = 0; i < fanout; i++) {
-    const isFile = Math.random() > 0.5;
-
-    if (isFile) {
-      generateFile(prefix, i);
-      numberOfFiles++;
-    } else {
-      const dir = generateDirectory(prefix);
-      numberOfFiles += generateFileTree(dir, depth - 1, fanout);
-    }
-  }
-
-  return numberOfFiles;
-}
-
-const hashData = (data) => {
-  return createHash('sha256').update(data).digest('hex');
-}
-
-
-const walkFileTree = (dir) => {
-  let results = [];
-  const list = readdirSync(dir);
-  list.forEach(
-    (elem) => {
-      if (elem.endsWith('.js')) {
-        results.push(path.join(dir, elem));
-      } else {
-        results = results.concat(walkFileTree(path.join(dir, elem)));
-      }
-    }
-  );
-  return results;
-}
-
-const randomPick = (arr, n) => {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr.slice(0, n);
-}
+import { 
+  generateFileTree, hashData, walkFileTree, randomPick, updateFileContents 
+} from "./utils";
 
 
 const mocksFolderPath = path.join(__dirname, "mocks");
@@ -163,7 +81,7 @@ describe("hasher basic functionality", () => {
   });
 
 
-  it("Should be fun", () => {
+  it("should create and operate on a random file tree with random changes and deletions", () => {
     // Depth is the level of nesting inside the file tree
     const depth = 5;
     // Fanout is the number of elements at each level
