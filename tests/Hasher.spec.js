@@ -1,15 +1,14 @@
 import * as path from "path";
 import {
-  readFileSync, unlinkSync, writeFileSync, existsSync, mkdirSync, rmdirSync
+  writeFileSync, existsSync, mkdirSync, rmdirSync, rmSync
 } from "fs";
 import { Hasher } from "../src/classes/Hasher";
+import { 
+  generateFileTree, hashData, walkFileTree, randomPick, updateFileContents 
+} from "./utils";
+
 
 const mocksFolderPath = path.join(__dirname, "mocks");
-const mockFilePath = path.join(mocksFolderPath, "mockFile.js");
-const dummyMockFilePath = path.join(mocksFolderPath, 'dummyMockFile.js');
-const mockFileData = "// This is a mock file to check Hasher class functionality (If you change this, you must also update the mockFileDataHash)";
-const mockFileDataHash = "7d131c61a24af69a77ff8656e74eab19491c6f17fb2175c8931d30751b345d2e";
-const debugJSON = { [mockFilePath]: mockFileDataHash };
 
 describe("hasher basic functionality", () => {
   let HasherInstance = null;
@@ -21,8 +20,6 @@ describe("hasher basic functionality", () => {
     mkdirSync(mocksFolderPath);
 
     HasherInstance = new Hasher();
-    writeFileSync(mockFilePath, mockFileData);
-    HasherInstance.updateDebugJSON(debugJSON);
   }
 
   beforeEach(cleanUpHasher);
@@ -46,7 +43,16 @@ describe("hasher basic functionality", () => {
   });
 
   it("should have only changed files", () => {
-    // change the mock file by adding a comment
+    // create original
+    const mockFilePath = path.join(mocksFolderPath, "mockFile.js");
+    const mockFileData = "// Test Mock File";
+    writeFileSync(mockFilePath, mockFileData);
+    // get hash, and empty updated hashes
+    HasherInstance.updateDebugJSON(
+      {[mockFilePath]: hashData(mockFileData)}
+    )
+
+    // update mock file
     const newMockFile = mockFileData + "\n // test comment";
     writeFileSync(mockFilePath, newMockFile);
     // get updated hash of mock file
@@ -64,10 +70,70 @@ describe("hasher basic functionality", () => {
   });
 
   it("should have only new files", () => {
+    // create dummy new file
+    const dummyMockFilePath = path.join(mocksFolderPath, "dummyMockFile.js");
     writeFileSync(dummyMockFilePath, '// Test Mock File');
+    // get updated hash
     HasherInstance.getHash(mocksFolderPath, "", true, true);
     const [changedFiles, newFiles] = HasherInstance.getUpdatedHashes();
     expect(changedFiles).toHaveLength(0);
     expect(newFiles).toHaveLength(1);
+  });
+
+
+  it("should create and operate on a random file tree with random changes and deletions", () => {
+    // Depth is the level of nesting inside the file tree
+    const depth = 5;
+    // Fanout is the number of elements at each level
+    const fanout = 5;
+
+    // Generate a random file tree
+    const numberOfFiles = generateFileTree(mocksFolderPath, depth, fanout);
+    // Generate a random number of files to change
+    const numberOfFilesToChange = Math.floor(Math.random() * numberOfFiles) + 1;
+    // Generate a random number of files to delete
+    const numberOfFilesToDelete = Math.floor(Math.random() * numberOfFiles) + 1;
+
+    // Get all files in the file tree
+    const allFiles = walkFileTree(mocksFolderPath);
+    expect(allFiles).toHaveLength(numberOfFiles);
+
+    // Get the hash of the file tree
+    HasherInstance.getHash(mocksFolderPath, "", true, true);
+    const [changedFiles, newFiles] = HasherInstance.getUpdatedHashes();
+    expect(changedFiles).toHaveLength(0);
+    expect(newFiles).toHaveLength(numberOfFiles);
+
+    // Pick random files to change
+    const filesToChange = randomPick(allFiles, numberOfFilesToChange);
+    expect(filesToChange).toHaveLength(numberOfFilesToChange);
+
+    // Change the contents of the files
+    filesToChange.forEach((filePath) => {
+      updateFileContents(filePath);
+    });
+
+    // Get the updated hash of the file tree
+    HasherInstance.emptyUpdatedHashes();
+    HasherInstance.getHash(mocksFolderPath, "", true, true);
+    const [changedFilesAfterChange, newFilesAfterChange] = HasherInstance.getUpdatedHashes();
+    expect(changedFilesAfterChange).toHaveLength(numberOfFilesToChange);
+    expect(newFilesAfterChange).toHaveLength(0);
+
+    // Pick random files to delete
+    const filesToDelete = randomPick(allFiles, numberOfFilesToDelete);
+    expect(filesToDelete).toHaveLength(numberOfFilesToDelete);
+
+    // Delete the files
+    filesToDelete.forEach((filePath) => {
+      rmSync(filePath);
+    });
+
+    // Get the updated hash of the file tree
+    HasherInstance.emptyUpdatedHashes();
+    HasherInstance.getHash(mocksFolderPath, "", true, true);
+    const [changedFilesAfterDelete, newFilesAfterDelete] = HasherInstance.getUpdatedHashes();
+    expect(changedFilesAfterDelete).toHaveLength(0);
+    expect(newFilesAfterDelete).toHaveLength(0);
   });
 });
