@@ -1,4 +1,4 @@
-import { run } from '../build/index';
+import { run } from '../build/run';
 import ConfigHelperInstance from '../build/classes/ConfigHelper';
 
 const mockArgs = [
