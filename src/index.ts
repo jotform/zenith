@@ -1,6 +1,7 @@
+import { Module } from 'module';
 import Runner from './classes/Runner.js';
 
-const run = async () => {
+export const run = async () => {
   try {
     const args = process.argv;
     const RunnerHelper = new Runner(...args);
@@ -8,8 +9,10 @@ const run = async () => {
   } catch (error) {
     console.log('ERR => R-I ::');
     if (error instanceof Error) throw error;
-    throw String(error);
+    throw Error(String(error));
   }
 };
 
-void run();
+if (require.main instanceof Module) {
+  void run();
+}
