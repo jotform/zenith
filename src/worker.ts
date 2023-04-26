@@ -20,7 +20,7 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     }
     return { output: commandOutput };
   } catch (error) {
-    if (error && typeof error === 'object' && error.hasOwnProperty('stderr')) {
+    if (error && typeof error === 'object' && 'stderr' in error) {
       const execErr = error as ExecError;
       Logger.log(2, 'ERR-W-E-1 :: output => ', execErr.stdout);
       return execErr;
@@ -40,7 +40,7 @@ const anotherJob = async (hash: string, root: string, output: string, target: st
     workerpool.workerEmit(outputHash === remoteHash ? `Hash hit for ${root}` : `Hashes mismatched for ${root},  ${outputHash} !== ${remoteHash}`);
     return remoteHash === outputHash;
   } catch (error) {
-    if (error && typeof error === 'object' && error.hasOwnProperty('stderr')) {
+    if (error && typeof error === 'object' && 'stderr' in error) {
       const execErr = error as ExecError;
       Logger.log(2, 'ERR-W-A :: output => ', execErr.stderr);
       return execErr;
