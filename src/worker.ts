@@ -4,6 +4,7 @@ import RemoteCacher from './classes/RemoteCacher';
 import Logger from './utils/logger';
 import { ROOT_PATH } from './utils/constants';
 import { configManagerInstance } from './config';
+import { ExecError } from './types/BuildTypes';
 
 const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string): Promise<{[output: string]: string} | Error> => {
   try {
@@ -19,8 +20,12 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     }
     return { output: commandOutput };
   } catch (error) {
-    if (error instanceof Error) Logger.log(2, 'ERR-W-E :: output => ', error.message);
-    else Logger.log(2, 'ERR-W-E :: output => ', error);
+    if (error && typeof error === 'object' && error.hasOwnProperty('stderr')) {
+      const execErr = error as ExecError;
+      Logger.log(2, 'ERR-W-E-1 :: output => ', execErr.stdout);
+      return execErr;
+    }
+    Logger.log(2, 'ERR-W-E-3 :: output => ', error);
     return new Error(String(error));
   }
 };
@@ -35,8 +40,12 @@ const anotherJob = async (hash: string, root: string, output: string, target: st
     workerpool.workerEmit(outputHash === remoteHash ? `Hash hit for ${root}` : `Hashes mismatched for ${root},  ${outputHash} !== ${remoteHash}`);
     return remoteHash === outputHash;
   } catch (error) {
-    if (error instanceof Error) Logger.log(2, 'ERR-W-A :: output => ', error.message);
-    else Logger.log(2, 'ERR-W-A :: output => ', error);
+    if (error && typeof error === 'object' && error.hasOwnProperty('stderr')) {
+      const execErr = error as ExecError;
+      Logger.log(2, 'ERR-W-A :: output => ', execErr.stderr);
+      return execErr;
+    }
+    Logger.log(2, 'ERR-W-A :: output => ', error);
     return new Error(String(error));
   }
 };

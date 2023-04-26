@@ -26,3 +26,12 @@ export interface PackageJsonType {
   files: string[],
   scripts: Record<string,string>,
 }
+
+export interface ExecError extends Error {
+  status: number,
+  signal: null | number,
+  output: Array<null | string>,
+  pid: number,
+  stdout: string,
+  stderr: string
+}
