@@ -6,14 +6,14 @@ import { ROOT_PATH } from './utils/constants';
 import { configManagerInstance } from './config';
 import { ExecError } from './types/BuildTypes';
 
-const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string): Promise<{[output: string]: string} | Error> => {
+const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined): Promise<{[output: string]: string} | Error> => {
   try {
     if (buildPath === undefined) throw new Error('Build path is undefined while trying to build!');
     const project = buildPath.split('/').pop();
     if (project === undefined) throw new Error('Could not read build path in execute method!');
     workerpool.workerEmit(`Running ${targetCommand} command for => ${project}`);
     const commandOutput = execSync(`pnpm --filter ${projectName} ${targetCommand}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
-    await Promise.all(outputs.map(output => RemoteCacher.cache(hash, root, output, targetCommand, commandOutput)));
+    await Promise.all(outputs.map(output => RemoteCacher.cache(hash, root, output, targetCommand, commandOutput, requiredFiles)));
     await Promise.all(outputs.map(output => RemoteCacher.sendOutputHash(hash, root, output, targetCommand)));
     if (!configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) {
       workerpool.workerEmit(`Files cached ${root}`);

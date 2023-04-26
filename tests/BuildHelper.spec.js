@@ -3,7 +3,8 @@ import ConfigHelperInstance from '../build/classes/ConfigHelper';
 
 const mockArgs = [
     '--target=build',
-    '--project=all'
+    '--project=all',
+    '-l 1'
 ]
 
 const mockProjects = {

@@ -5,7 +5,7 @@ import zipper from 'zip-local';
 import unzipper from 'unzipper';
 import { Readable } from 'stream';
 import { ROOT_PATH } from '../utils/constants';
-import { isOutputTxt } from '../utils/functions';
+import { isOutputTxt, getMissingRequiredFiles } from '../utils/functions';
 import Logger from '../utils/logger';
 import Hasher from './Hasher';
 import { DebugJSON } from '../types/ConfigTypes';
@@ -145,12 +145,19 @@ class RemoteCacher {
     ));
   }
 
-  async cache(hash: string, root: string, output: string, target: string, commandOutput: string) {
+  async cache(hash: string, root: string, output: string, target: string, commandOutput: string, requiredFiles: string[] | undefined) {
     if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
     try {
       const directoryPath = path.join(ROOT_PATH, root, output);
-      if (output !== 'stdout' && !existsSync(directoryPath)) {
+      if ((output !== 'stdout' && !existsSync(directoryPath))) {
         return;
+      }
+      const notFoundFiles = getMissingRequiredFiles(directoryPath, requiredFiles)
+      if (notFoundFiles.length > 0) {
+        const fileLog = notFoundFiles.reduce((acc, curr) => {
+          return `${acc}\n${curr}`;
+        }, '')
+        throw new Error(`Below required files are not found while building ${root}.\n${fileLog}`)
       }
       const cachePath = `${target}/${hash}/${root}`;
       switch (output) {

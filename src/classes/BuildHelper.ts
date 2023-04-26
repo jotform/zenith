@@ -132,7 +132,7 @@ export default class BuildHelper extends WorkerHelper {
           script: this.command
         };
       }
-      const { outputs, script, constantDependencies, compareRemoteHashes } = config[this.command];
+      const { outputs, script, constantDependencies, compareRemoteHashes, requiredFiles } = config[this.command];
       const buildPath = path.join(ROOT_PATH, root);
       const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
       const isCached = await this.cacher.isCached(hash, root, outputs, script);
@@ -146,7 +146,7 @@ export default class BuildHelper extends WorkerHelper {
       if (!isCached) {
         Logger.log(2, 'Cache does not exist for => ', buildProject, hash);
         const startTime = process.hrtime();
-        const output = await this.execute(buildPath, script, hash, root, outputs, buildProject);
+        const output = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
         this.missingProjects.push({ buildProject, time: process.hrtime(startTime) });
         if (output instanceof Error) {
           // Error on executing shell command
@@ -170,7 +170,7 @@ export default class BuildHelper extends WorkerHelper {
           if (!recoverResponse) {
             // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
             // eslint-disable-next-line no-await-in-loop
-            await this.execute(buildPath, script, hash, root, outputs, buildProject);
+            await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
             this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime) });
             this.built++;
           } else {
