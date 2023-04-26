@@ -1,2 +1,4 @@
 .eslintrc.js
 *.config.js
+*.spec.js
+build
