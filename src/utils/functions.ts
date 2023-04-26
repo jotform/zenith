@@ -1,4 +1,4 @@
-import { SAVE_AS_TXT_KEYWORD, ROOT_PATH } from './constants';
+import { SAVE_AS_TXT_KEYWORD } from './constants';
 import { ProjectStats } from '../types/BuildTypes';
 import { existsSync, readdirSync, statSync } from 'fs';
 import { join } from 'path';
@@ -44,14 +44,10 @@ export const isEmpty = (path: string): boolean => {
 };
 
 export const getMissingRequiredFiles = (path: string, requiredFiles: string[] | undefined): string[] => {
-  console.log('req files:::', requiredFiles)
   if (!requiredFiles) return [];
   const nonExistantFiles: string[] = [];
   requiredFiles.forEach(filePath => {
-    console.log('filepath:::', filePath)
-    console.log('whole path:::', `${path}/${filePath}`)
-    console.log('exists:::', existsSync(`${path}/${filePath}`))
-    if (!existsSync(`${path}/${filePath}`)) nonExistantFiles.push(filePath)
-  })
+    if (!existsSync(`${path}/${filePath}`)) nonExistantFiles.push(filePath);
+  });
   return nonExistantFiles;
-}
+};

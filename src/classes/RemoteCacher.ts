@@ -152,12 +152,12 @@ class RemoteCacher {
       if ((output !== 'stdout' && !existsSync(directoryPath))) {
         return;
       }
-      const notFoundFiles = getMissingRequiredFiles(directoryPath, requiredFiles)
+      const notFoundFiles = getMissingRequiredFiles(directoryPath, requiredFiles);
       if (notFoundFiles.length > 0) {
         const fileLog = notFoundFiles.reduce((acc, curr) => {
           return `${acc}\n${curr}`;
-        }, '')
-        throw new Error(`Below required files are not found while building ${root}.\n${fileLog}`)
+        }, '');
+        throw new Error(`Below required files are not found while building ${root}.\n${fileLog}`);
       }
       const cachePath = `${target}/${hash}/${root}`;
       switch (output) {
