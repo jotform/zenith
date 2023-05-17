@@ -1,6 +1,6 @@
 import { SAVE_AS_TXT_KEYWORD } from './constants';
-import { ProjectStats } from '../types/BuildTypes';
-import { existsSync, readdirSync, statSync } from 'fs';
+import { ProjectStats, PackageJsonType } from '../types/BuildTypes';
+import { existsSync, readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 export const formatTimeDiff = (time: [number, number]): string => {
@@ -50,4 +50,12 @@ export const getMissingRequiredFiles = (path: string, requiredFiles: string[] | 
     if (!existsSync(`${path}/${filePath}`)) nonExistantFiles.push(filePath);
   });
   return nonExistantFiles;
+};
+
+export const isCommandDummy = (commandPath: string, command: string): boolean => {
+  const packageJSONPath = join(commandPath, "package.json");
+  const packageJSON = JSON.parse(readFileSync(packageJSONPath, {encoding: 'utf8'})) as PackageJsonType;
+  const commandValue = packageJSON.scripts[command];
+  if (commandValue === 'true') return true;
+  return false;
 };
