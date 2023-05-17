@@ -6,7 +6,7 @@ import Cacher from './Cacher';
 import Hasher from './Hasher';
 import WorkerHelper from './WorkerHelper';
 import ConfigHelper from './ConfigHelper';
-import { formatMissingProjects, formatTimeDiff, isOutputTxt } from '../utils/functions';
+import { formatMissingProjects, formatTimeDiff, isCommandDummy, isOutputTxt } from '../utils/functions';
 import Logger from '../utils/logger';
 import { ProjectStats, BuildParams, PackageJsonType } from '../types/BuildTypes';
 import LocalCacher from './LocalCacher';
@@ -144,7 +144,9 @@ export default class BuildHelper extends WorkerHelper {
         }
       }
       if (!isCached) {
-        Logger.log(2, 'Cache does not exist for => ', buildProject, hash);
+        if (!isCommandDummy(buildPath, script)) {
+          Logger.log(2, 'Cache does not exist for => ', buildProject, hash);
+        }
         const startTime = process.hrtime();
         const output = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
         this.missingProjects.push({ buildProject, time: process.hrtime(startTime) });
