@@ -144,12 +144,12 @@ export default class BuildHelper extends WorkerHelper {
         }
       }
       if (!isCached) {
-        if (!isCommandDummy(buildPath, script)) {
-          Logger.log(2, 'Cache does not exist for => ', buildProject, hash);
-        }
         const startTime = process.hrtime();
         const output = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
-        this.missingProjects.push({ buildProject, time: process.hrtime(startTime) });
+        if (!isCommandDummy(buildPath, script)) {
+          Logger.log(2, 'Cache does not exist for => ', buildProject, hash);
+          this.missingProjects.push({ buildProject, time: process.hrtime(startTime) });
+        }
         if (output instanceof Error) {
           // Error on executing shell command
           throw output;
