@@ -87,11 +87,33 @@ export default class BuildHelper extends WorkerHelper {
     }
   }
 
+  isCyclic(dependency: string, project: string, [...visited]: string[]): boolean {
+    if (dependency === project) return true;
+    if (visited.includes(dependency)) return false;
+
+    const dependencySet = this.projects.get(dependency);
+    if (!dependencySet) return false;
+
+    visited.push(dependency);
+    const dependencyArray = Array.from(dependencySet);
+    return dependencyArray.some(n => this.isCyclic(n, project, visited));
+  }
+
+  controlCyclicDependencies() {
+    this.projects.forEach((dependencies, project) => {
+      const dependencyArray = Array.from(dependencies);
+      dependencyArray.forEach(dep => {
+        if (this.isCyclic(dep, project, [])) throw new Error(`Cyclic dependency found between ${project} <=> ${dep}.`);
+      });
+    });
+  }
+
   buildAll(): void {
     const allProjects = ConfigHelper.projects;
     Object.keys(allProjects).forEach(project => {
       this.addProject(project);
     });
+    this.controlCyclicDependencies();
   }
 
   removeProject(dependency: string): void {
@@ -118,7 +140,6 @@ export default class BuildHelper extends WorkerHelper {
     this.build();
   }
 
-  // eslint-disable-next-line
   async builder(buildProject: string) {
     try {
       this.totalCount++;
@@ -159,19 +180,15 @@ export default class BuildHelper extends WorkerHelper {
         }
         this.built++;
       } else if (outputs.length) {
-        // eslint-disable-next-line
         for (const output of outputs) {
           // const outputPath = path.join(ROOT_PATH, root, output);
           Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
           const startTime = process.hrtime();
-          // eslint-disable-next-line no-await-in-loop
           const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash && !!compareRemoteHashes, this.logAffected);
           if (recoverResponse instanceof Error) {
             throw recoverResponse;
           }
           if (!recoverResponse) {
-            // TODO: will remove in for loop sorry for shitty code anyone who sees it :((
-            // eslint-disable-next-line no-await-in-loop
             await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
             this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime) });
             this.built++;
@@ -223,7 +240,6 @@ export default class BuildHelper extends WorkerHelper {
       }
       return;
     }
-    // eslint-disable-next-line no-restricted-syntax
     for (const eachProject of projects) {
       if (!this.started.has(eachProject)) {
         this.started.add(eachProject);
