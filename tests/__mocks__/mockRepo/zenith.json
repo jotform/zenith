@@ -1,0 +1,31 @@
+{
+  "ignore": [
+    "node_modules",
+    ".gitignore",
+    "build",
+    "lib",
+    "dist",
+    "webpack.sock",
+    ".DS_Store",
+    "test-results",
+    "playwright/.cache"
+  ],
+  "buildConfig": {
+    "cachePath": ".customCache",
+    "appConfig": {
+      "build": {
+        "script": "build",
+        "input": "",
+        "outputs": [
+          "build"
+        ]
+      }
+    }
+  },
+  "projects": {
+    "app1": "packages/apps/app1",
+    "app2": "packages/apps/app2",
+    "lib1": "packages/libs/lib1",
+    "lib2": "packages/libs/lib2"
+  }
+}
