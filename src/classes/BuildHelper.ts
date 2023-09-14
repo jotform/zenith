@@ -34,6 +34,8 @@ export default class BuildHelper extends WorkerHelper {
 
   logAffected = false;
 
+  skipDependencies = false;
+
   debugLocation = 'debug/';
 
   startTime: [number, number] = [0, 0];
@@ -50,11 +52,12 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async init({
-    debug, compareWith, compareHash, logAffected, debugLocation
+    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation
   }: BuildParams) : Promise<void> {
     this.cacher = new Cacher().cacher;
     this.compareHash = compareHash;
     this.logAffected = logAffected;
+    this.skipDependencies = skipDependencies;
     this.debugLocation = debugLocation;
     this.startTime = process.hrtime();
     if (debug) {
@@ -72,6 +75,10 @@ export default class BuildHelper extends WorkerHelper {
         const packageJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, root, 'package.json'), { encoding: 'utf-8' })) as PackageJsonType;
         const allDependencies: Record<string, string> = { ...packageJSON.dependencies, ...packageJSON.devDependencies };
         const dependencyArray = Object.keys(allDependencies);
+        if (this.skipDependencies) {
+          this.projects.set(project, new Set());
+          return;
+        }
         this.projects.set(project, new Set(dependencyArray.filter(i => ConfigHelper.projects[i])));
         dependencyArray.forEach(dependency => {
           this.addProject(dependency);

@@ -8,6 +8,7 @@ export interface BuildParams {
   compareWith: string;
   compareHash: boolean;
   logAffected: boolean;
+  skipDependencies: boolean;
   debugLocation: string;
 }
 
