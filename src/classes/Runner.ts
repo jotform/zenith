@@ -17,6 +17,8 @@ export default class Runner {
 
   logAffected = false;
 
+  skipDependencies = false;
+
   debugLocation = 'debug/';
 
   worker = '6';
@@ -30,6 +32,7 @@ export default class Runner {
       .option('-c, --compareWith <compareWith>', 'Compare with')
       .option('-ch, --noCompareHash', 'default: false. If false, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.')
       .option('-la, --logAffected', 'default: false. If true, will log outputs of ONLY missed caches\' executes.')
+      .option('-sd, --skipDependencies', 'default: false. If true, will skip dependencies and execute only the target.')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -68,6 +71,9 @@ export default class Runner {
     if (options.logAffected) {
       this.logAffected = true;
     }
+    if (options.skipDependencies) {
+      this.skipDependencies = true;
+    }
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
 
@@ -81,6 +87,7 @@ export default class Runner {
       compareWith: this.compareWith,
       compareHash: this.compareHash,
       logAffected: this.logAffected,
+      skipDependencies: this.skipDependencies,
       debugLocation: this.debugLocation
     });
     Logger.log(2, `Zenith ${this.command} started.`);
