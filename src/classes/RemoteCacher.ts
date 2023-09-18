@@ -139,7 +139,6 @@ class RemoteCacher {
           reject(err);
         }
         Logger.log(3, 'Cache successfully stored');
-        Logger.log(2, commandOutput);
         resolve();
       }
     ));
