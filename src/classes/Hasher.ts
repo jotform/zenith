@@ -1,6 +1,7 @@
 import { Hash, createHash } from 'crypto';
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import * as path from 'path';
+import { ROOT_PATH } from '../utils/constants';
 import ConfigHelperInstance from './ConfigHelper';
 import { DebugJSON } from '../types/ConfigTypes';
 import { isEmpty } from '../utils/functions';
@@ -53,7 +54,15 @@ export class Hasher {
 
   getHash(directoryPath: string, script?: string, debug?: boolean, compareWith?: string, constantDeps?: Array<string>, isFirst = true): string {
     const hasher = createHash('sha256');
-    if (isFirst && script) hasher.update(script);
+    if (isFirst && script) {
+      hasher.update(script);
+
+      const packageJSONPath = path.join(ROOT_PATH, 'package.json');
+      if (existsSync(packageJSONPath)) {
+        const rootPackageJSONString = readFileSync(packageJSONPath, { encoding: 'utf-8' });
+        hasher.update(rootPackageJSONString);
+      }
+    }
     const directory = readdirSync(directoryPath, { withFileTypes: true });
     if (directory.length === 0) return '';
     if (isFirst) {
