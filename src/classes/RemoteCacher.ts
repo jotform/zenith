@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, rmSync } from 'fs';
 import * as path from 'path';
 import { S3 } from '@aws-sdk/client-s3';
-import zipper from 'zip-local';
+import Zipper from './Zipper';
 import unzipper from 'unzipper';
 import { Readable } from 'stream';
 import { ROOT_PATH } from '../utils/constants';
@@ -10,6 +10,7 @@ import Logger from '../utils/logger';
 import Hasher from './Hasher';
 import { DebugJSON } from '../types/ConfigTypes';
 import { configManagerInstance } from '../config';
+import ZipExporter from '../libs/zipExporter';
 
 class RemoteCacher {
   s3Client: S3;
@@ -99,25 +100,24 @@ class RemoteCacher {
 
   cacheZip(cachePath: string, output: string, directoryPath: string) {
     return new Promise<void>((resolve, reject) => {
-      zipper.zip(directoryPath, (error, zipped) => {
-        if (!error) {
+      void Zipper.zip(directoryPath, (error: Error | null, zipped: ZipExporter) => {
+      if (!error) {
           zipped.compress();
           const buff = zipped.memory();
-          this.s3Client.putObject(
-            {
-              Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-              Key: `${cachePath}/${output}.zip`,
-              Body: buff
-            },
-            err => {
-              if (err) {
+          if (buff instanceof Buffer) {
+            this.s3Client.putObject(
+              {
+                Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+                Key: `${cachePath}/${output}.zip`,
+                Body: buff
+              }).then(() => {
+                Logger.log(3, 'Cache successfully stored');
+                resolve();
+              }).catch((err) => {
                 Logger.log(2, err);
                 reject(err);
-              }
-              Logger.log(3, 'Cache successfully stored');
-              resolve();
-            }
-          );
+              });
+          }
         } else {
           Logger.log(2, 'ERROR => ', error);
           reject(error);
