@@ -100,24 +100,28 @@ class RemoteCacher {
 
   cacheZip(cachePath: string, output: string, directoryPath: string) {
     return new Promise<void>((resolve, reject) => {
-      void Zipper.zip(directoryPath, (error: Error | null, zipped: ZipExporter) => {
+      Zipper.zip(directoryPath, (error: Error | null, zipped: ZipExporter) => {
       if (!error) {
           zipped.compress();
-          const buff = zipped.memory();
-          if (buff instanceof Buffer) {
-            this.s3Client.putObject(
-              {
-                Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-                Key: `${cachePath}/${output}.zip`,
-                Body: buff
-              }).then(() => {
-                Logger.log(3, 'Cache successfully stored');
-                resolve();
-              }).catch((err) => {
-                Logger.log(2, err);
-                reject(err);
-              });
-          }
+          zipped.memory().then((buff) => {
+            if (buff instanceof Buffer) {
+              this.s3Client.putObject(
+                {
+                  Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+                  Key: `${cachePath}/${output}.zip`,
+                  Body: buff
+                }).then(() => {
+                  Logger.log(3, 'Cache successfully stored');
+                  resolve();
+                }).catch((err) => {
+                  Logger.log(2, err);
+                  reject(err);
+                });
+            }
+          }).catch((err) => {
+            Logger.log(2, err);
+            reject(err);
+          });
         } else {
           Logger.log(2, 'ERROR => ', error);
           reject(error);

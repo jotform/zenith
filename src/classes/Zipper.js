@@ -33,32 +33,27 @@ JSZip.make = () => {
 
 const zipDir = async (dir, zippedDir) => {
     return new Promise((resolve, reject) => {
-        fs.readdir(dir, async (err, files) => {
+        fs.readdir(dir, (err, files) => {
             if (err) {
                 reject(err);
             }
-            const filePaths = files.map(file => path.normalize(path.join(dir, file)));
-            const typedFiles = Array(filePaths.length);
-
-            for (const filePath of filePaths) {
-                fs.stat(filePath, async (err, stats) => {
-                    if (err) {
-                        reject(err);
-                    }
-                    typedFiles[filePaths.indexOf(filePath)] = {
-                        path: filePath,
-                        isDirectory: stats.isDirectory() ? 'dir' : 'file',
-                    };
+            const filePaths = files.map(file => path.join(dir, file));
+            const typedFiles = filePaths.reduce((acc, filePath) => {
+                const stats = fs.statSync(filePath);
+                acc.push({
+                    path: filePath,
+                    isDirectory: stats.isDirectory() ? 'dir' : 'file',
                 });
-            }
+                return acc;
+            }, []);
             for (const entry of typedFiles) {
                 const parsedEntryPath = path.parse(entry.path);
                 if (entry.type === 'dir') {
                     const newZippedDir = zippedDir.folder(parsedEntryPath.base);
-                    await zipDir(entry.path, newZippedDir);
+                    zipDir(entry.path, newZippedDir).then(console.log);
                 }
                 else {
-                    fs.readFile(entry.path, async (err, data) => {
+                    fs.readFile(entry.path, (err, data) => {
                         if (err) {
                             reject(err);
                         }
@@ -86,28 +81,30 @@ const zipDirSync = (dir, zippedDir) => {
             zippedDir.file(entry, data);
         }
     }
+    return zippedDir;
 }
 
 const Zipper = {};
 Zipper.sync = {};
 
-Zipper.zip = async (entity, _callback, _shiftedCallback) => {
+Zipper.zip = (entity, _callback, _shiftedCallback) => {
     const zippedObj = JSZip.make();
     if (typeof entity === 'string') {
         // entity is a path to a file/directory
         const callback = _callback || (() => {});
         const normalizedPath = path.normalize(entity);
-        fs.stat(normalizedPath, async (err, stats) => {
+        fs.stat(normalizedPath, (err, stats) => {
             if (err) {
                 callback(err);
             }
             if (stats.isDirectory()) {
-                await zipDir(normalizedPath, zippedObj);
-                callback(null, new ZipExporter(zippedObj, false, true));
+                const zipped = zipDirSync(normalizedPath, zippedObj);
+                callback(null, new ZipExporter(zipped, false, true));
+                return;
             }
             else {
                 const parsedPath = path.parse(normalizedPath);
-                fs.readFile(normalizedPath, async (err, data) => {
+                fs.readFile(normalizedPath, (err, data) => {
                     if (err) {
                         callback(err);
                     }
