@@ -36,3 +36,15 @@ export interface ExecError extends Error {
   stdout: string,
   stderr: string
 }
+
+export interface NodeSystemError extends Error{
+  address?: string,
+  code: string,
+  dest: string,
+  errno: number,
+  info?: object,
+  message: string,
+  path?: string,
+  port?: number,
+  syscall: string
+}

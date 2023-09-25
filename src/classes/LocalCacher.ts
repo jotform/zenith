@@ -1,60 +1,100 @@
-import { cpSync, existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, createWriteStream } from 'fs';
 import * as path from 'path';
-import ConfigHelper from './ConfigHelper';
 import { ROOT_PATH } from '../utils/constants';
 import Logger from '../utils/logger';
 import { DebugJSON } from '../types/ConfigTypes';
+import { NodeSystemError } from '../types/BuildTypes';
+import { configManagerInstance } from '../config';
+import Cacher from './Cacher';
+import { Readable } from 'stream';
 
-export default class LocalCacher {
-  static cachePath = path.join(ROOT_PATH, ConfigHelper.getCachePath());
+class LocalCacher extends Cacher {
+  cachePath = '';
 
-  static isCached(hash: string): boolean {
-    const cachePath = path.join(this.cachePath, hash);
-    return existsSync(cachePath);
-  }
-
-  static cache(hash: string, root: string, output: string): void {
-    try {
-      const hashedPath = path.join(this.cachePath, hash, root, output);
-      const inputPath = path.join(root, output);
-      if (existsSync(inputPath)) {
-        mkdirSync(hashedPath, { recursive: true });
-        cpSync(inputPath, hashedPath, { recursive: true });
-      }
-    } catch (error) {
-      Logger.log(2, error);
+  constructor() {
+    super();
+    this.cachePath = configManagerInstance.getCachePath();
+    if (!path.isAbsolute(this.cachePath)) {
+      this.cachePath = path.join(ROOT_PATH, this.cachePath);
+    }
+    if (!existsSync(this.cachePath)) {
+      mkdirSync(this.cachePath);
     }
   }
 
-  static recoverFromCache(hash: string, root: string, output: string): void {
-    try {
-      const hashedPath = path.join(this.cachePath, hash, root, output);
-      const inputPath = path.join(root, output);
-      if (existsSync(hashedPath)) {
-        mkdirSync(inputPath, { recursive: true });
-        cpSync(hashedPath, inputPath, { recursive: true });
+  putObject({ Key, Body }: { Bucket?: string | undefined; Key: string; Body: string | Buffer; }): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        if (!existsSync(Key)) mkdirSync(Key, { recursive: true });
+        const writer = createWriteStream(Key);
+        writer.write(Body);
+        writer.end();
+        resolve();
       }
-    } catch (error) {
-      Logger.log(2, error);
-    }
+      catch (error) {
+        Logger.log(2, error);
+        reject(error);
+      }
+    });
   }
 
-  // implementation not finished!
-  getDebugFile(compareWith: string, command: string, debugLocation: string): Promise<void> {
-    Logger.log(4, command, compareWith, debugLocation);
-    return new Promise(resolve => resolve());
+  getObject({ Key }: { Bucket?: string | undefined; Key: string; }): Promise<Readable> {
+    return new Promise((resolve, reject) => {
+      try {
+        const reader = readFileSync(Key);
+        const readable = Readable.from(reader);
+        resolve(readable);
+      }
+      catch (error) {
+        Logger.log(2, error);
+        reject(error);
+      }
+    });
   }
 
-  updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string): void {
-    Logger.log(4, debugJSON, target, debugLocation);
+  listObjects({ Prefix }: { Bucket?: string | undefined; Prefix: string; }): Promise<string[]> {
+    return new Promise((resolve, reject) => {
+      try {
+        const files = readFileSync(Prefix);
+        resolve(files.toString().split('\n'));
+      }
+      catch (error) {
+        const nodeError = error as NodeSystemError;
+        if (nodeError.code === 'ENOENT') {
+          resolve([]);
+          return;
+        }
+        Logger.log(2, error);
+        reject(error);
+      }
+    });
   }
 
-  sendOutputHash(hash: string, root: string, output: string, target: string): void {
-    Logger.log(4, hash, root, output, target);
+  async getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>> {
+    return new Promise((resolve) => {
+      if (compareWith) {
+        try {
+          const debugFilePath = path.join(this.cachePath, `${target}/${debugLocation}debug.${compareWith}.json`);
+          const debugFileString = readFileSync(debugFilePath, { encoding: 'utf-8' });
+          resolve(JSON.parse(debugFileString) as Record<string, string>);
+        } catch (error) {
+          Logger.log(2, error);
+          resolve({});
+        }
+      }
+      resolve({});
+    });
   }
 
-  async isCached(hash: string, root: string, outputs: Array<string>, target: string): Promise<void> {
-    Logger.log(4, hash, root, outputs, target);
-    return new Promise(resolve => resolve());
+  updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string) {
+    if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
+    const debugBuff = Buffer.from(JSON.stringify(debugJSON));
+    const debugFilePath = path.join(this.cachePath, `${target}/${debugLocation}debug.${configManagerInstance.getConfigValue('ZENITH_DEBUG_ID')}.json`);
+
+    const writer = createWriteStream(debugFilePath);
+    writer.write(debugBuff);
+    writer.end();
   }
 }
+
+export default LocalCacher;
