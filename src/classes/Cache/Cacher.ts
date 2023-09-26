@@ -1,71 +1,45 @@
-import { existsSync, mkdirSync, rmSync } from 'fs';
-import * as path from 'path';
-import { S3 } from '@aws-sdk/client-s3';
-import Zipper from './Zipper';
-import unzipper from 'unzipper';
+import { DebugJSON } from '../../types/ConfigTypes';
+import Zipper from './../Zipper';
+import ZipExporter from '../../libs/zipExporter';
 import { Readable } from 'stream';
-import { ROOT_PATH } from '../utils/constants';
-import { isOutputTxt, getMissingRequiredFiles } from '../utils/functions';
-import Logger from '../utils/logger';
-import Hasher from './Hasher';
-import { DebugJSON } from '../types/ConfigTypes';
-import { configManagerInstance } from '../config';
-import ZipExporter from '../libs/zipExporter';
+import Logger from '../../utils/logger';
+import { configManagerInstance } from '../../config';
+import path = require('path');
+import { ROOT_PATH } from '../../utils/constants';
+import { existsSync, rmSync, mkdirSync } from 'fs';
+import { getMissingRequiredFiles, isOutputTxt } from '../../utils/functions';
+import unzipper from 'unzipper';
+import Hasher from './../Hasher';
 
-class RemoteCacher {
-  s3Client: S3;
+export default abstract class Cacher {
+  cachePath = '';
 
-  constructor() {
-    const S3_ACCESS_KEY = configManagerInstance.getConfigValue('S3_ACCESS_KEY');
-    const S3_SECRET_KEY = configManagerInstance.getConfigValue('S3_SECRET_KEY');
-    this.s3Client = new S3({
-      region: 'us-east-1',
-      endpoint: configManagerInstance.getConfigValue('S3_ENDPOINT'),
-      credentials: {
-        accessKeyId: S3_ACCESS_KEY,
-        secretAccessKey: S3_SECRET_KEY
+  abstract putObject({Bucket, Key, Body}: {Bucket?: string,Key: string, Body: Buffer | string}): Promise<void>
+  abstract getObject({Bucket, Key}: {Bucket?: string,Key: string}): Promise<Readable>
+  abstract listObjects({Bucket, Prefix}: {Bucket?: string, Prefix: string}): Promise<string[]>
+  
+  callback({
+    successMessage,
+    resolve,
+    reject
+  } : {
+    successMessage: string,
+    resolve?: (value: void | PromiseLike<void>) => void,
+    reject?: (reason?: unknown) => void
+  }) {
+    return (err: Error | null) => {
+      if (err) {
+        Logger.log(2, err);
+        if (reject) reject(err);
       }
-    });
+      Logger.log(3, successMessage);
+      if (resolve) resolve();
+    };
   }
 
-  async getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>>{
-    if (compareWith) {
-      const debugFilePath = `${target}/${debugLocation}debug.${compareWith}.json`;
-      try {
-        const response = await this.s3Client.getObject({
-          Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-          Key: debugFilePath
-        });
-        if (response.Body === undefined) throw Error('debug JSON was undefined');
-        const debugFileString = await response.Body.transformToString();
-        return JSON.parse(debugFileString) as Record<string, string>;
-      } catch (error) {
-        Logger.log(2, error);
-        return {};
-      }
-    }
-    return {};
-  }
-
-  updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string) {
-    if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
-    const debugBuff = Buffer.from(JSON.stringify(debugJSON));
-    this.s3Client.putObject(
-      {
-        Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-        Key: `${target}/${debugLocation}debug.${configManagerInstance.getConfigValue('ZENITH_DEBUG_ID')}.json`,
-        Body: debugBuff
-      },
-      err => {
-        if (err) {
-          Logger.log(2, err);
-        }
-        Logger.log(3, 'Cache successfully stored');
-      }
-    );
-  }
-
-  sendOutputHash(hash: string, root: string, output: string, target: string) {
+  abstract getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>>
+  abstract updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string): void
+  sendOutputHash(hash: string, root: string, output: string, target: string): Promise<void> | undefined {
     if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
     return new Promise<void>((resolve, reject) => {
       try {
@@ -77,21 +51,18 @@ class RemoteCacher {
         }
         const outputHash = Hasher.getHash(directoryPath);
         const outputBuff = Buffer.from(outputHash);
-        this.s3Client.putObject(
+        this.putObject(
           {
             Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
             Key: `${cachePath}/${output}-hash.txt`,
             Body: outputBuff
-          },
-          err => {
-            if (err) {
-              Logger.log(2, err);
-              reject(err);
-            }
-            Logger.log(3, 'Cache successfully stored');
+          }).then(() => {
+            Logger.log(3, 'Hash successfully stored');
             resolve();
-          }
-        );
+          }).catch((err) => {
+            Logger.log(2, err);
+            reject(err);
+          });
       } catch (error) {
         Logger.log(2, error);
       }
@@ -105,13 +76,12 @@ class RemoteCacher {
           zipped.compress();
           zipped.memory().then((buff) => {
             if (buff instanceof Buffer) {
-              this.s3Client.putObject(
+              this.putObject(
                 {
-                  Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
                   Key: `${cachePath}/${output}.zip`,
                   Body: buff
                 }).then(() => {
-                  Logger.log(3, 'Cache successfully stored');
+                  Logger.log(3, 'Zip Cache successfully stored');
                   resolve();
                 }).catch((err) => {
                   Logger.log(2, err);
@@ -131,21 +101,18 @@ class RemoteCacher {
   }
 
   cacheTxt(cachePath: string, output: string, commandOutput: string) {
-    return new Promise<void>((resolve, reject) => this.s3Client.putObject(
-      {
-        Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+    return new Promise<void>((resolve, reject) => {
+      this.putObject({
         Key: `${cachePath}/${output}.txt`,
         Body: commandOutput
-      },
-      err => {
-        if (err) {
-          Logger.log(2, err);
-          reject(err);
-        }
-        Logger.log(3, 'Cache successfully stored');
+      }).then(() => {
+        Logger.log(3, 'Txt Cache successfully stored');
         resolve();
-      }
-    ));
+      }).catch((err) => {
+        Logger.log(2, err);
+        reject(err);
+      });
+    });
   }
 
   async cache(hash: string, root: string, output: string, target: string, commandOutput: string, requiredFiles: string[] | undefined) {
@@ -210,61 +177,53 @@ class RemoteCacher {
     const isStdOut = isOutputTxt(output);
     const remotePath = `${target}/${originalHash}/${root}/${output}.${isStdOut ? 'txt' : 'zip'}`;
     try {
-      const response = await this.s3Client.getObject({
+      const response = await this.getObject({
         Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
         Key: remotePath
       });
       const outputPath = path.join(ROOT_PATH, root, output);
-      if (response.Body === undefined) throw new Error('Error while recovering from cache: S3 Response Body is undefined');
-      const responseBody = response.Body as Readable;
+      if (response === undefined) throw new Error('Error while recovering from cache: S3 Response Body is undefined');
       if (isStdOut) {
-        const stdout = await this.txtPipeEnd(responseBody);
+        const stdout = await this.txtPipeEnd(response);
         if (logAffected) return stdout;
-        return Logger.log(2, await this.txtPipeEnd(responseBody));
+        return Logger.log(2, await this.txtPipeEnd(response));
       }
       if (existsSync(outputPath)) {
         rmSync(outputPath, { recursive: true, force: true });
         mkdirSync(outputPath);
       }
-      return await this.pipeEnd(responseBody, outputPath);
+      return await this.pipeEnd(response, outputPath);
     } catch (error) {
       Logger.log(2, error);
     }
   }
 
-  async checkHashes(hash: string, root: string, output: string, target: string) {
+  async checkHashes(hash: string, root: string, output: string, target: string): Promise<Readable | undefined> {
     const remotePath = `${target}/${hash}/${root}/${output}-hash.txt`;
     try {
-      const response = await this.s3Client.getObject({
+      const response = await this.getObject({
         Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
         Key: remotePath
       });
-      if (response.Body === undefined) throw new Error('Error while checking hashes: S3 Response Body is undefined');
-      const remoteHash = await response.Body.transformToString();
-      return remoteHash;
+      if (response === undefined) throw new Error('Error while checking hashes: S3 Response Body is undefined');
+      return response;
     } catch (error) {
       Logger.log(2, error);
     }
   }
 
   async isCached(hash: string, root: string, outputs: Array<string>, target: string) {
-    const cachedFolder = await this.s3Client.listObjectsV2({
+    const cachedFolder = await this.listObjects({
       Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
       Prefix: `${target}/${hash}/${root}`
     });
-    if (cachedFolder.Contents) {
-      const contents = cachedFolder.Contents.reduce<Record<string, boolean>>((acc, curr) => {
-        if (curr.Key === undefined) return acc;
-        acc[curr.Key] = true;
-        return acc;
-      }, {});
-      // eslint-disable-next-line no-restricted-syntax
+    if (cachedFolder) {
       for (const output of outputs) {
         // TODO: find a better, more generalized way for extensions
         const cachePath = `${target}/${hash}/${root}/${output}.${
           isOutputTxt(output) ? 'txt' : 'zip'
         }`;
-        if (!contents[cachePath]) {
+        if (!cachedFolder.includes(cachePath)) {
           return false;
         }
       }
@@ -273,15 +232,4 @@ class RemoteCacher {
     return false;
   }
 
-  updateBuildMap() {
-    // this.cacheClient.fPutObject(configManagerInstance.getConfigValue('S3_BUCKET_NAME'), 'buildMap.json', './build.json', (err, data) => {
-    //   if (err) {
-    //     console.log(err, 'ERROR');
-    //   }
-    //   console.log('SUCCESS UPDATING BUILD MAP', data);
-    // });
-  }
 }
-
-const RemoteCacherInstance = new RemoteCacher();
-export default RemoteCacherInstance;

@@ -2,15 +2,15 @@
 import { readFileSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
-import Cacher from './Cacher';
+import CacherFactory from './Cache/CacheFactory';
 import Hasher from './Hasher';
 import WorkerHelper from './WorkerHelper';
 import ConfigHelper from './ConfigHelper';
 import { formatMissingProjects, formatTimeDiff, isCommandDummy, isOutputTxt } from '../utils/functions';
 import Logger from '../utils/logger';
 import { ProjectStats, BuildParams, PackageJsonType } from '../types/BuildTypes';
-import LocalCacher from './LocalCacher';
-import RemoteCacherInstance from './RemoteCacher';
+import LocalCacher from './Cache/LocalCacher';
+import RemoteCacher from './Cache/RemoteCacher';
 import { configManagerInstance } from '../config';
 
 export default class BuildHelper extends WorkerHelper {
@@ -44,17 +44,17 @@ export default class BuildHelper extends WorkerHelper {
 
   compareWith = '';
 
-  cacher: typeof RemoteCacherInstance | LocalCacher = new LocalCacher();
+  cacher: RemoteCacher | LocalCacher;
 
   constructor(command : string, worker : string) {
     super(command, worker);
     this.command = command;
+    this.cacher = CacherFactory.getCacher();
   }
 
   async init({
     debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation
   }: BuildParams) : Promise<void> {
-    this.cacher = new Cacher().cacher;
     this.compareHash = compareHash;
     this.logAffected = logAffected;
     this.skipDependencies = skipDependencies;
