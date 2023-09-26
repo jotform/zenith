@@ -98,7 +98,7 @@ Zenith looks for a file named "zenith.json" in the same folder where your root p
 The project uses several required environment variables and params. Without them, the tool will not work as intended.
 ### Environment Variables
 ```
-- USE_REMOTE_CACHE (bool): If true, remote cache is used. The local cache feature is unstable for now, so this variable should be set to true.
+- CACHE_TYPE (string): One of ['local', 'remote', 'mixed'], 'local' by default. If 'remote', S3 environment variables are required.
 - S3_ACCESS_KEY (string): Access key to be used to get objects from and write objects to the buckets.
 - S3_SECRET_KEY (string): Secret key to be used to get objects from and write objects to the buckets.
 - S3_BUCKET_NAME (string): Bucket name to be written and read from.

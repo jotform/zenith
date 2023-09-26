@@ -13,7 +13,7 @@ class RemoteCacher extends Cacher {
     const S3_ACCESS_KEY = configManagerInstance.getConfigValue('S3_ACCESS_KEY');
     const S3_SECRET_KEY = configManagerInstance.getConfigValue('S3_SECRET_KEY');
     this.s3Client = new S3({
-      region: 'us-east-1',
+      region: configManagerInstance.getConfigValue('S3_REGION'),
       endpoint: configManagerInstance.getConfigValue('S3_ENDPOINT'),
       credentials: {
         accessKeyId: S3_ACCESS_KEY,
@@ -29,7 +29,7 @@ class RemoteCacher extends Cacher {
         Key,
         Body
       }).then(() => {
-        Logger.log(3, 'Cache successfully stored');
+        Logger.log(3, 'Cache successfully stored to remote');
         resolve();
       }).catch(err => {
         Logger.log(2, err);
@@ -49,7 +49,7 @@ class RemoteCacher extends Cacher {
           Logger.log(2, err);
           reject(err);
         }
-        Logger.log(3, 'Cache successfully stored');
+        Logger.log(3, 'Cache successfully retrieved from remote');
         resolve(data?.Body as Readable);
       });
     });
