@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, createWriteStream } from 'fs';
+import { existsSync, mkdirSync, readFileSync, createWriteStream, readdirSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
 import Logger from '../utils/logger';
@@ -25,8 +25,10 @@ class LocalCacher extends Cacher {
   putObject({ Key, Body }: { Bucket?: string | undefined; Key: string; Body: string | Buffer; }): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
-        if (!existsSync(Key)) mkdirSync(Key, { recursive: true });
-        const writer = createWriteStream(Key);
+        const fullPath = path.join(this.cachePath, Key);
+        const directoryPath = path.dirname(fullPath);
+        if (!existsSync(directoryPath)) mkdirSync(directoryPath, { recursive: true });
+        const writer = createWriteStream(fullPath);
         writer.write(Body);
         writer.end();
         resolve();
@@ -41,7 +43,8 @@ class LocalCacher extends Cacher {
   getObject({ Key }: { Bucket?: string | undefined; Key: string; }): Promise<Readable> {
     return new Promise((resolve, reject) => {
       try {
-        const reader = readFileSync(Key);
+        const fullPath = path.join(this.cachePath, Key);
+        const reader = readFileSync(fullPath);
         const readable = Readable.from(reader);
         resolve(readable);
       }
@@ -55,8 +58,10 @@ class LocalCacher extends Cacher {
   listObjects({ Prefix }: { Bucket?: string | undefined; Prefix: string; }): Promise<string[]> {
     return new Promise((resolve, reject) => {
       try {
-        const files = readFileSync(Prefix);
-        resolve(files.toString().split('\n'));
+        const fullPath = path.join(this.cachePath, Prefix);
+        const files = readdirSync(fullPath);
+        const paths = files.map(file => path.join(Prefix, file));
+        resolve(paths);
       }
       catch (error) {
         const nodeError = error as NodeSystemError;
