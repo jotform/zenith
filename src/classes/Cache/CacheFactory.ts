@@ -1,7 +1,7 @@
 import Cacher from './Cacher';
 import LocalCacher from './LocalCacher';
 import RemoteCacher from './RemoteCacher';
-import { configManagerInstance } from '../config';
+import { configManagerInstance } from '../../config';
 
 export default class CacherFactory {
     static getCacher(): Cacher {

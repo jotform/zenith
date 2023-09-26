@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, createWriteStream, readdirSync } from 'fs';
 import * as path from 'path';
-import { ROOT_PATH } from '../utils/constants';
-import Logger from '../utils/logger';
-import { DebugJSON } from '../types/ConfigTypes';
-import { NodeSystemError } from '../types/BuildTypes';
-import { configManagerInstance } from '../config';
+import { ROOT_PATH } from '../../utils/constants';
+import Logger from '../../utils/logger';
+import { DebugJSON } from '../../types/ConfigTypes';
+import { NodeSystemError } from '../../types/BuildTypes';
+import { configManagerInstance } from '../../config';
 import Cacher from './Cacher';
 import { Readable } from 'stream';
 

@@ -2,15 +2,15 @@
 import { readFileSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
-import CacherFactory from './CacheFactory';
+import CacherFactory from './Cache/CacheFactory';
 import Hasher from './Hasher';
 import WorkerHelper from './WorkerHelper';
 import ConfigHelper from './ConfigHelper';
 import { formatMissingProjects, formatTimeDiff, isCommandDummy, isOutputTxt } from '../utils/functions';
 import Logger from '../utils/logger';
 import { ProjectStats, BuildParams, PackageJsonType } from '../types/BuildTypes';
-import LocalCacher from './LocalCacher';
-import RemoteCacher from './RemoteCacher';
+import LocalCacher from './Cache/LocalCacher';
+import RemoteCacher from './Cache/RemoteCacher';
 import { configManagerInstance } from '../config';
 
 export default class BuildHelper extends WorkerHelper {

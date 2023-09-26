@@ -1,8 +1,8 @@
 import { S3 } from '@aws-sdk/client-s3';
 import { Readable } from 'stream';
-import Logger from '../utils/logger';
-import { DebugJSON } from '../types/ConfigTypes';
-import { configManagerInstance } from '../config';
+import Logger from '../../utils/logger';
+import { DebugJSON } from '../../types/ConfigTypes';
+import { configManagerInstance } from '../../config';
 import Cacher from './Cacher';
 
 class RemoteCacher extends Cacher {

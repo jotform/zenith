@@ -1,6 +1,6 @@
 import workerpool from 'workerpool';
 import { execSync } from 'child_process';
-import CacherFactory from './classes/CacheFactory';
+import CacherFactory from './classes/Cache/CacheFactory';
 import { Readable } from 'stream';
 import Logger from './utils/logger';
 import { ROOT_PATH } from './utils/constants';

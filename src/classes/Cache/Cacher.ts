@@ -1,15 +1,15 @@
-import { DebugJSON } from '../types/ConfigTypes';
-import Zipper from './Zipper';
-import ZipExporter from '../libs/zipExporter';
+import { DebugJSON } from '../../types/ConfigTypes';
+import Zipper from './../Zipper';
+import ZipExporter from '../../libs/zipExporter';
 import { Readable } from 'stream';
-import Logger from '../utils/logger';
-import { configManagerInstance } from '../config';
+import Logger from '../../utils/logger';
+import { configManagerInstance } from '../../config';
 import path = require('path');
-import { ROOT_PATH } from '../utils/constants';
+import { ROOT_PATH } from '../../utils/constants';
 import { existsSync, rmSync, mkdirSync } from 'fs';
-import { getMissingRequiredFiles, isOutputTxt } from '../utils/functions';
+import { getMissingRequiredFiles, isOutputTxt } from '../../utils/functions';
 import unzipper from 'unzipper';
-import Hasher from './Hasher';
+import Hasher from './../Hasher';
 
 export default abstract class Cacher {
   cachePath = '';
