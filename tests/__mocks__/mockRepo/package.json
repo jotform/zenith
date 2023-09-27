@@ -10,6 +10,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@jotforminc/zenith": "^0.9.3"
+    "@jotforminc/zenith": "^0.11.0"
   }
 }
