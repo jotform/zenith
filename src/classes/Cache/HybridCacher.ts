@@ -3,6 +3,7 @@ import RemoteCacher from "./RemoteCacher";
 import LocalCacher from "./LocalCacher";
 import { Readable } from "stream";
 import { DebugJSON } from "../../types/ConfigTypes";
+import Logger from "../../utils/logger";
 
 export default class HybridCacher implements Cacher {
     cachePath = '';
@@ -39,6 +40,10 @@ export default class HybridCacher implements Cacher {
             }
         }
         return [];
+    }
+
+    isHybrid() {
+        return true;
     }
 
     async getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>> {
@@ -90,6 +95,22 @@ export default class HybridCacher implements Cacher {
 
     async cache(hash: string, root: string, output: string, target: string, commandOutput: string, requiredFiles: string[] | undefined): Promise<void> {
         await Promise.all(this.cachers.map(cacher => cacher.cache(hash, root, output, target, commandOutput, requiredFiles)));
+    }
+
+    async cacheToOther(hash: string, root: string, output: string, target: string, outputHash: string | boolean | void): Promise<void> {
+        for (const cacher of this.cachers) {
+            try {
+                const isCached = await cacher.isCached(hash, root, [output], target);
+                if (!isCached) {
+                    // TODO: required file handling
+                    console.log('hash', hash, 'outputHash', outputHash);
+                    await cacher.cache(hash, root, output, target, outputHash as string, []);
+                    await cacher.sendOutputHash(hash, root, output, target);
+                }
+            } catch (error) {
+                Logger.log(2, error);
+            }
+        }
     }
 
     async pipeEnd(stream: Readable, outputPath: string): Promise<string> {

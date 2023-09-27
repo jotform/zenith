@@ -17,6 +17,10 @@ export default abstract class Cacher {
   abstract putObject({Bucket, Key, Body}: {Bucket?: string,Key: string, Body: Buffer | string}): Promise<void>
   abstract getObject({Bucket, Key}: {Bucket?: string,Key: string}): Promise<Readable>
   abstract listObjects({Bucket, Prefix}: {Bucket?: string, Prefix: string}): Promise<string[]>
+
+  isHybrid() {
+    return false;
+  }
   
   callback({
     successMessage,
