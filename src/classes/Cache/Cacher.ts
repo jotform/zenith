@@ -173,7 +173,7 @@ export default abstract class Cacher {
     });
   }
 
-  async recoverFromCache(originalHash: string, root: string, output: string, target: string, logAffected: boolean): Promise<string | void> {
+  async recoverFromCache(originalHash: string, root: string, output: string, target: string, logAffected: boolean): Promise<string | boolean | void> {
     const isStdOut = isOutputTxt(output);
     const remotePath = `${target}/${originalHash}/${root}/${output}.${isStdOut ? 'txt' : 'zip'}`;
     try {
@@ -185,8 +185,8 @@ export default abstract class Cacher {
       if (response === undefined) throw new Error('Error while recovering from cache: S3 Response Body is undefined');
       if (isStdOut) {
         const stdout = await this.txtPipeEnd(response);
-        if (logAffected) return stdout;
-        return Logger.log(2, await this.txtPipeEnd(response));
+        if (!logAffected) Logger.log(2, stdout);
+        return stdout;
       }
       if (existsSync(outputPath)) {
         rmSync(outputPath, { recursive: true, force: true });
@@ -194,6 +194,9 @@ export default abstract class Cacher {
       }
       return await this.pipeEnd(response, outputPath);
     } catch (error) {
+      if (!error) {
+        return false;
+      }
       Logger.log(2, error);
     }
   }

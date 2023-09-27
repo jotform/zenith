@@ -1,7 +1,7 @@
 import Cacher from './Cacher';
 import LocalCacher from './LocalCacher';
 import RemoteCacher from './RemoteCacher';
-import MixedCacher from './MixedCacher';
+import HybridCacher from './HybridCacher';
 import { configManagerInstance } from '../../config';
 
 export default class CacherFactory {
@@ -12,8 +12,9 @@ export default class CacherFactory {
           return new LocalCacher();
         case 'remote':
           return new RemoteCacher();
-        case 'mixed':
-          return new MixedCacher() as Cacher;
+        case 'local-first':
+        case 'remote-first':
+          return new HybridCacher(cache) as Cacher;
         default:
           throw new Error('Invalid cache type');
       }

@@ -49,6 +49,11 @@ class LocalCacher extends Cacher {
         resolve(readable);
       }
       catch (error) {
+        const nodeError = error as NodeSystemError;
+        if (nodeError.code === 'ENOENT') {
+          reject(false);
+          return;
+        }
         Logger.log(2, error);
         reject(error);
       }
