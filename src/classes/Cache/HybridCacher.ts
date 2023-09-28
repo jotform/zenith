@@ -103,7 +103,6 @@ export default class HybridCacher implements Cacher {
                 const isCached = await cacher.isCached(hash, root, [output], target);
                 if (!isCached) {
                     // TODO: required file handling
-                    console.log('hash', hash, 'outputHash', outputHash);
                     await cacher.cache(hash, root, output, target, outputHash as string, []);
                     await cacher.sendOutputHash(hash, root, output, target);
                 }
