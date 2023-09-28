@@ -4,6 +4,7 @@ import path from 'path';
 import JSZip from 'jszip';
 import ZipExporter from '../libs/zipExporter';
 import UnzippedReader from '../libs/UnzippedReader';
+import { Readable } from 'stream';
 
 JSZip.make = () => {
     const augment = (_opts) => {
@@ -85,37 +86,10 @@ const zipDirSync = (dir, zippedDir) => {
 }
 
 const Zipper = {};
-Zipper.sync = {};
 
 Zipper.zip = (entity, _callback, _shiftedCallback) => {
     const zippedObj = JSZip.make();
-    if (typeof entity === 'string') {
-        // entity is a path to a file/directory
-        const callback = _callback || (() => {});
-        const normalizedPath = path.normalize(entity);
-        fs.stat(normalizedPath, (err, stats) => {
-            if (err) {
-                callback(err);
-            }
-            if (stats.isDirectory()) {
-                const zipped = zipDirSync(normalizedPath, zippedObj);
-                callback(null, new ZipExporter(zipped, false, true));
-                return;
-            }
-            else {
-                const parsedPath = path.parse(normalizedPath);
-                fs.readFile(normalizedPath, (err, data) => {
-                    if (err) {
-                        callback(err);
-                    }
-                    zippedObj.file(parsedPath.base, data);
-                    callback(null, new ZipExporter(zippedObj, false, true));
-                });
-            }
-            callback(null, zippedObj);
-        });
-    }
-    else if (entity instanceof Buffer) {
+    if (entity instanceof Buffer) {
         // entity is a buffer containing a file, _callback is the name of the buffer
         const callback = _shiftedCallback || (() => {});
         zippedObj.file(_callback, entity);
@@ -130,5 +104,11 @@ Zipper.zip = (entity, _callback, _shiftedCallback) => {
         _callback(new Error('Invalid entity type'));
     }
 };
+
+Zipper.unzip = async (entity) => {
+    const zippedObj = JSZip.make();
+    await zippedObj.loadAsync(entity);
+    return new ZipExporter(zippedObj, true, true);
+}
 
 export default Zipper;

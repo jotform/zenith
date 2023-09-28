@@ -7,8 +7,7 @@ import { configManagerInstance } from '../../config';
 import path = require('path');
 import { ROOT_PATH } from '../../utils/constants';
 import { existsSync, rmSync, mkdirSync } from 'fs';
-import { getMissingRequiredFiles, isOutputTxt } from '../../utils/functions';
-import unzipper from 'unzipper';
+import { getMissingRequiredFiles, isOutputTxt, readableToBuffer } from '../../utils/functions';
 import Hasher from './../Hasher';
 
 export default abstract class Cacher {
@@ -80,30 +79,30 @@ export default abstract class Cacher {
   cacheZip(cachePath: string, output: string, directoryPath: string) {
     return new Promise<void>((resolve, reject) => {
       Zipper.zip(directoryPath, (error: Error | null, zipped: ZipExporter) => {
-      if (!error) {
-          zipped.compress();
-          zipped.memory().then((buff) => {
-            if (buff instanceof Buffer) {
-              this.putObject(
-                {
-                  Key: `${cachePath}/${output}.zip`,
-                  Body: buff
-                }).then(() => {
-                  Logger.log(3, 'Zip Cache successfully stored');
-                  resolve();
-                }).catch((err) => {
-                  Logger.log(2, err);
-                  reject(err);
-                });
-            }
-          }).catch((err) => {
-            Logger.log(2, err);
-            reject(err);
-          });
-        } else {
+        if (error) {
           Logger.log(2, 'ERROR => ', error);
           reject(error);
+          return;
         }
+        zipped.compress();
+        zipped.memory().then((buff) => {
+          if (buff instanceof Buffer) {
+            this.putObject(
+              {
+                Key: `${cachePath}/${output}.zip`,
+                Body: buff
+              }).then(() => {
+                Logger.log(3, 'Zip Cache successfully stored');
+                resolve();
+              }).catch((err) => {
+                Logger.log(2, err);
+                reject(err);
+              });
+          }
+        }).catch((err) => {
+          Logger.log(2, err);
+          reject(err);
+        });
       });
     });
   }
@@ -154,20 +153,17 @@ export default abstract class Cacher {
     }
   }
 
-  pipeEnd(stream: Readable, outputPath: string) {
-    return new Promise<string>((resolve, reject) => {
-      stream
-        .pipe(
-          unzipper
-            .Extract({ path: outputPath })
-            .on('close', () => {
-              const hash = Hasher.getHash(outputPath);
-              resolve(hash);
-            })
-            .on('error', (unzipperErr: string) => reject(unzipperErr))
-        )
-        .on('error', (err: string) => reject(err));
-    });
+  async pipeEnd(stream: Readable, outputPath: string) {
+    try {
+      const buff = await readableToBuffer(stream);
+      const unzipped = await Zipper.unzip(buff);
+      await unzipped.save(outputPath);
+      const hash = Hasher.getHash(outputPath);
+      return hash;
+    } catch (error) {
+      Logger.log(2, error);
+      throw error;
+    }
   }
 
   txtPipeEnd(stream: Readable): Promise<string> {

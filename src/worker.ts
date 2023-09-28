@@ -4,22 +4,10 @@ import CacherFactory from './classes/Cache/CacheFactory';
 import { Readable } from 'stream';
 import Logger from './utils/logger';
 import { ROOT_PATH } from './utils/constants';
+import { readableToBuffer } from './utils/functions';
 import { configManagerInstance } from './config';
 import { ExecError } from './types/BuildTypes';
 import HybridCacher from './classes/Cache/HybridCacher';
-
-const readableToString = async (readable: Readable): Promise<string> => {
-  const chunks: Array<Buffer> = [];
-  return new Promise((resolve, reject) => {
-    readable.on('data', (chunk: Buffer) => {
-      chunks.push(Buffer.from(chunk));
-    });
-    readable.on('error', (err: Error) => reject(err));
-    readable.on('end', () => {
-      resolve(Buffer.concat(chunks).toString('utf-8'));
-    });
-  });
-};
 
 const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined): Promise<{[output: string]: string} | Error> => {
   try {
@@ -60,7 +48,7 @@ const anotherJob = async (hash: string, root: string, output: string, target: st
     const remoteHashReadable = await cacher.checkHashes(hash, root, output, target);
     if (typeof outputHash !== 'string') throw new Error('Output hash is not string while recovering from cache!');
     if (!(remoteHashReadable instanceof Readable)) throw new Error('Remote hash is not string while recovering from cache!');
-    const remoteHash = await readableToString(remoteHashReadable);
+    const remoteHash = (await readableToBuffer(remoteHashReadable)).toString('utf-8');
     workerpool.workerEmit(outputHash === remoteHash ? `Hash hit for ${root}` : `Hashes mismatched for ${root},  ${outputHash} !== ${remoteHash}`);
     return remoteHash === outputHash;
   } catch (error) {
