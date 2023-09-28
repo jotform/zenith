@@ -2,6 +2,7 @@ import { SAVE_AS_TXT_KEYWORD } from './constants';
 import { ProjectStats, PackageJsonType } from '../types/BuildTypes';
 import { existsSync, readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { Readable } from 'stream';
 
 export const formatTimeDiff = (time: [number, number]): string => {
   const seconds = (time[0] + time[1] / 1e9);
@@ -58,4 +59,17 @@ export const isCommandDummy = (commandPath: string, command: string): boolean =>
   const commandValue = packageJSON.scripts[command];
   if (commandValue === 'true') return true;
   return false;
+};
+
+export const readableToBuffer = async (readable: Readable): Promise<Buffer> => {
+  const chunks: Array<Buffer> = [];
+  return new Promise((resolve, reject) => {
+    readable.on('data', (chunk: Buffer) => {
+      chunks.push(Buffer.from(chunk));
+    });
+    readable.on('error', (err: Error) => reject(err));
+    readable.on('end', () => {
+      resolve(Buffer.concat(chunks));
+    });
+  });
 };

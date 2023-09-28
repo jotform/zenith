@@ -3,95 +3,19 @@ import path from 'path';
 import UnzippedReader from './UnzippedReader';
 import JSZip from '../types/JSZip';
 
-type CallbackType = (err: Error | null, data?: Buffer) => void;
 type FSErrorType = {
     code: string;
     message?: string;
 }
 
-const extractTo = (_path = './', jszipObject: JSZip, callback: CallbackType) => {
+const extractTo = async (_path = './', jszipObject: JSZip): Promise<void> => {
     let extractionPath = path.normalize(_path);
     const absolutePath = path.resolve(extractionPath);
     if (extractionPath[extractionPath.length - 1] !== path.sep) {
         extractionPath += path.sep;
     }
 
-    fs.stat(extractionPath, (err, stats) => {
-        if (err) {
-            callback(err);
-            return;
-        }
-        if (!stats.isDirectory()) {
-            callback(new Error('Path is not a directory'));
-            return;
-        }
-
-        const dirs: string[] = [];
-        const files: string[] = [];
-        const jsZipFiles = Object.values(jszipObject.files);
-        jsZipFiles.forEach((file) => {
-            const extractedEntryPath = path.resolve(path.join(absolutePath, file.name));
-            if (!extractedEntryPath.startsWith(absolutePath)) {
-                callback(new Error('Entry is outside of the target dir'));
-                return;
-            }
-
-            if (file.dir) {
-                dirs.push(file.name);
-            } else {
-                files.push(file.name);
-            }
-        });
-
-        dirs.sort((a, b) => {
-            const calculateDirDepth = (str: string) => (str.match(/\//g) || []).length;
-            return calculateDirDepth(a) - calculateDirDepth(b);
-        });
-
-        const writeFiles = (err: Error | null = null) => {
-            if (err) {
-                callback(err);
-                return;
-            }
-            for (const file of files) {
-                void jszipObject.file(file)?.async('nodebuffer').then((data: Buffer) => {
-                    fs.writeFile(path.join(extractionPath, file), data, (err) => {
-                        if (err) {
-                            callback(err);
-                            return;
-                        }
-                        callback(null);
-                        return;
-                    });
-                });
-            }
-        };
-
-        dirs.forEach((dir) => {
-            fs.stat(path.join(extractionPath, dir), (err, dirStats) => {
-                if ((err && err.code === 'ENOENT') || !dirStats.isDirectory()) {
-                    fs.mkdir(path.join(extractionPath, dir), (err => {
-                        if (err) {
-                            writeFiles(err);
-                            return;
-                        }
-                        writeFiles();
-                    }));
-                }
-            });
-        });
-    });
-};
-
-const extractToSync = (_path = './', jszipObject: JSZip) => {
-    let extractionPath = path.normalize(_path);
-    const absolutePath = path.resolve(extractionPath);
-    if (extractionPath[extractionPath.length - 1] !== path.sep) {
-        extractionPath += path.sep;
-    }
-
-    const stats = fs.statSync(extractionPath);
-
+    const stats = await fs.promises.stat(extractionPath);
     if (!stats.isDirectory()) {
         throw new Error('Path is not a directory');
     }
@@ -117,32 +41,35 @@ const extractToSync = (_path = './', jszipObject: JSZip) => {
         return calculateDirDepth(a) - calculateDirDepth(b);
     });
 
-    
-    dirs.forEach((dir) => {
+    const writeFiles = async () => {
+        for (const file of files) {
+            const data = await jszipObject.file(file)?.async('nodebuffer');
+            if (!data) {
+                throw new Error('Could not read file');
+            }
+            await fs.promises.writeFile(path.join(extractionPath, file), data);
+        }
+    };
+
+    for (const dir of dirs) {
         try {
-            const dirStats = fs.statSync(path.join(extractionPath, dir));
+            const dirStats = await fs.promises.stat(path.join(extractionPath, dir));
             if (!dirStats.isDirectory()) {
                 throw new Error("!dir");
             }
+            await writeFiles();
         }
-        catch (err) {
-            const error = err as FSErrorType;
-            if (error.code === 'ENOENT' || error.message === '!dir') {
-                fs.mkdirSync(path.join(extractionPath, dir));
+        catch (error) {
+            const err = error as FSErrorType;
+            if (err.code === 'ENOENT' || err.message === '!dir') {
+                await fs.promises.mkdir(path.join(extractionPath, dir), { recursive: true });
             }
             else {
-                throw err;
+                throw error;
             }
         }
-    });
-    
-    for (const file of files) {
-        void jszipObject.file(file)?.async('nodebuffer').then((data: Buffer) => {
-            if (data) {
-                fs.writeFileSync(path.join(extractionPath, file), data);
-            }
-        });
     }
+    await writeFiles();
 };
 
 class ZipExporter {
@@ -180,27 +107,17 @@ class ZipExporter {
         return new UnzippedReader(this.content);
     }
 
-    async save(_path = './', callback: CallbackType) {
+    async save(_path = './') {
         if (!this.srcUnzipped) {
             const buff = await this.content.generateAsync({
                 type: 'nodebuffer',
                 compression: this.compressed ? 'DEFLATE' : undefined
             });
             const normalizedPath = path.normalize(_path);
-            if (!this.saveAsync) {
-                fs.writeFileSync(normalizedPath, buff);
-            }
-            else {
-                fs.writeFile(normalizedPath, buff, callback);
-            }
+            await fs.promises.writeFile(normalizedPath, buff);
         }
         else {
-            if (!this.saveAsync) {
-                extractToSync(_path, this.content);
-            }
-            else {
-                extractTo(_path, this.content, callback);
-            }
+                await extractTo(_path, this.content);
         }
     }
 }
