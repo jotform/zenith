@@ -46,6 +46,10 @@ export default class HybridCacher implements Cacher {
         return true;
     }
 
+    isDebug() {
+        return process.env.ZENITH_CACHE_DEBUG === 'true';
+    }
+
     async getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>> {
         for (const cacher of this.cachers) {
             const debugFile = await cacher.getDebugFile(compareWith, target, debugLocation);
@@ -141,8 +145,12 @@ export default class HybridCacher implements Cacher {
     async isCached(hash: string, root: string, outputs: string[], target: string): Promise<boolean> {
         for (const cacher of this.cachers) {
             const isCached = await cacher.isCached(hash, root, outputs, target);
-            if (isCached) return true;
+            if (isCached) {
+                if (this.isDebug()) Logger.log(1, `isCached returning true for ${cacher.constructor.name} for ${root}`);
+                return true;
+            }
         }
+        if (this.isDebug()) Logger.log(1, `isCached returned false for ${root}`);
         return false;
     }
 

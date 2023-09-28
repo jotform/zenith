@@ -20,6 +20,9 @@ class LocalCacher extends Cacher {
     if (!existsSync(this.cachePath)) {
       mkdirSync(this.cachePath);
     }
+    if (this.isDebug()) {
+      Logger.log(1, 'Cache path => ', this.cachePath);
+    }
   }
 
   putObject({ Key, Body }: { Bucket?: string | undefined; Key: string; Body: string | Buffer; }): Promise<void> {
@@ -31,6 +34,7 @@ class LocalCacher extends Cacher {
         const writer = createWriteStream(fullPath);
         writer.write(Body);
         writer.end();
+        if (this.isDebug()) Logger.log(1, 'Cached Locally => ', fullPath);
         resolve();
       }
       catch (error) {
@@ -46,6 +50,7 @@ class LocalCacher extends Cacher {
         const fullPath = path.join(this.cachePath, Key);
         const reader = readFileSync(fullPath);
         const readable = Readable.from(reader);
+        if (this.isDebug()) Logger.log(1, 'Retrieved from cache => ', fullPath);
         resolve(readable);
       }
       catch (error) {
@@ -66,6 +71,7 @@ class LocalCacher extends Cacher {
         const fullPath = path.join(this.cachePath, Prefix);
         const files = readdirSync(fullPath);
         const paths = files.map(file => path.join(Prefix, file));
+        if (this.isDebug()) Logger.log(1, 'Listed from cache => ', paths);
         resolve(paths);
       }
       catch (error) {

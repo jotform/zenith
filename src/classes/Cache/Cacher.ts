@@ -21,6 +21,10 @@ export default abstract class Cacher {
   isHybrid() {
     return false;
   }
+
+  isDebug() {
+    return process.env.ZENITH_CACHE_DEBUG === 'true';
+  }
   
   callback({
     successMessage,
@@ -134,6 +138,7 @@ export default abstract class Cacher {
         throw new Error(`Below required files are not found while building ${root}.\n${fileLog}`);
       }
       const cachePath = `${target}/${hash}/${root}`;
+      if (this.isDebug()) Logger.log(1, `Caching output ${directoryPath} to ${cachePath}`);
       switch (output) {
         case 'stdout':
           await this.cacheTxt(cachePath, output, commandOutput);
