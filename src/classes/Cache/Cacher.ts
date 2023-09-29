@@ -76,33 +76,26 @@ export default abstract class Cacher {
     });
   }
 
-  cacheZip(cachePath: string, output: string, directoryPath: string) {
-    return new Promise<void>((resolve, reject) => {
-      Zipper.zip(directoryPath, (error: Error | null, zipped: ZipExporter) => {
-        if (error) {
-          Logger.log(2, 'ERROR => ', error);
-          reject(error);
-          return;
+  async cacheZip(cachePath: string, output: string, directoryPath: string) {
+    await Zipper.zip(directoryPath, (error: Error | null, zipped: ZipExporter) => {
+      if (error) {
+        Logger.log(2, 'ERROR CZ-1 => ', error);
+        return;
+      }
+      zipped.compress();
+      zipped.memory().then((buff) => {
+        if (buff instanceof Buffer) {
+          this.putObject({
+            Key: `${cachePath}/${output}.zip`,
+            Body: buff
+          }).then(() => {
+            Logger.log(3, 'Zip Cache successfully stored');
+          }).catch((err) => {
+            Logger.log(2, err);
+          });
         }
-        zipped.compress();
-        zipped.memory().then((buff) => {
-          if (buff instanceof Buffer) {
-            this.putObject(
-              {
-                Key: `${cachePath}/${output}.zip`,
-                Body: buff
-              }).then(() => {
-                Logger.log(3, 'Zip Cache successfully stored');
-                resolve();
-              }).catch((err) => {
-                Logger.log(2, err);
-                reject(err);
-              });
-          }
-        }).catch((err) => {
-          Logger.log(2, err);
-          reject(err);
-        });
+      }).catch((err) => {
+        Logger.log(2, err);
       });
     });
   }
