@@ -44,8 +44,8 @@ const zipDir = async (dir, zippedDir) => {
   for (const entry of typedFiles) {
     const parsedEntryPath = path.parse(entry.path);
     if (entry.type === 'dir') {
-      zippedDir.folder(parsedEntryPath.base);
-      await zipDir(entry.path, zippedDir);
+      const newZippedDir = zippedDir.folder(parsedEntryPath.base);
+      await zipDir(entry.path, newZippedDir);
     }
     else {
       const data = await fs.promises.readFile(entry.path);
@@ -56,27 +56,25 @@ const zipDir = async (dir, zippedDir) => {
 
 const Zipper = {};
 
-Zipper.zip = async (entity, _callback, _shiftedCallback) => {
+Zipper.zip = async (entity) => {
   const zippedObj = JSZip.make();
   if (typeof entity === 'string') {
     // entity is a path to a file/directory
-    const callback = _callback || (() => {});
     const normalizedPath = path.normalize(entity);
     const stats = await fs.promises.stat(normalizedPath);
     if (stats.isDirectory()) {
       await zipDir(normalizedPath, zippedObj);
-      callback(null, new ZipExporter(zippedObj, false, true));
-      return;
+      return new ZipExporter(zippedObj, false, true);
     }
     else {
       const parsedPath = path.parse(normalizedPath);
       const data = await fs.promises.readFile(normalizedPath);
       zippedObj.file(parsedPath.base, data);
-      callback(null, new ZipExporter(zippedObj, false, true));
+      return new ZipExporter(zippedObj, false, true);
     }
   }
   else {
-    _callback(new Error('Invalid entity type'));
+    throw new Error('Invalid entity type');
   }
 };
 

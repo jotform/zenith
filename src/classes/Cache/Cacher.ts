@@ -77,27 +77,19 @@ export default abstract class Cacher {
   }
 
   async cacheZip(cachePath: string, output: string, directoryPath: string) {
-    await Zipper.zip(directoryPath, (error: Error | null, zipped: ZipExporter) => {
-      if (error) {
-        Logger.log(2, 'ERROR CZ-1 => ', error);
-        return;
-      }
-      zipped.compress();
-      zipped.memory().then((buff) => {
-        if (buff instanceof Buffer) {
-          this.putObject({
-            Key: `${cachePath}/${output}.zip`,
-            Body: buff
-          }).then(() => {
-            Logger.log(3, 'Zip Cache successfully stored');
-          }).catch((err) => {
-            Logger.log(2, err);
-          });
-        }
-      }).catch((err) => {
-        Logger.log(2, err);
+    const zipped = await Zipper.zip(directoryPath);
+    zipped.compress();
+    const buff = await zipped.memory();
+    if (buff instanceof Buffer) {
+      await this.putObject({
+        Key: `${cachePath}/${output}.zip`,
+        Body: buff
       });
-    });
+      Logger.log(3, 'Zip Cache successfully stored');
+    } else {
+      Logger.log(2, 'Zip Cache failed to store');
+      throw new Error('Zip Cache failed to store');
+    }
   }
 
   cacheTxt(cachePath: string, output: string, commandOutput: string) {
@@ -131,6 +123,9 @@ export default abstract class Cacher {
       }
       const cachePath = `${target}/${hash}/${root}`;
       if (this.isDebug()) Logger.log(1, `Caching output ${directoryPath} to ${cachePath}`);
+      if (root.includes('inbox')) {
+        console.log('inbox', cachePath, output, directoryPath);
+      }
       switch (output) {
         case 'stdout':
           await this.cacheTxt(cachePath, output, commandOutput);
