@@ -123,9 +123,6 @@ export default abstract class Cacher {
       }
       const cachePath = `${target}/${hash}/${root}`;
       if (this.isDebug()) Logger.log(1, `Caching output ${directoryPath} to ${cachePath}`);
-      if (root.includes('inbox')) {
-        console.log('inbox', cachePath, output, directoryPath);
-      }
       switch (output) {
         case 'stdout':
           await this.cacheTxt(cachePath, output, commandOutput);
