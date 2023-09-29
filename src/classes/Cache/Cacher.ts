@@ -1,14 +1,15 @@
 import { DebugJSON } from '../../types/ConfigTypes';
 import Zipper from './../Zipper';
-import ZipExporter from '../../libs/zipExporter';
 import { Readable } from 'stream';
 import Logger from '../../utils/logger';
 import { configManagerInstance } from '../../config';
 import path = require('path');
 import { ROOT_PATH } from '../../utils/constants';
-import { existsSync, rmSync, mkdirSync } from 'fs';
+import { existsSync } from 'fs';
+import { stat, rm, mkdir } from 'fs/promises';
 import { getMissingRequiredFiles, isOutputTxt, readableToBuffer } from '../../utils/functions';
 import Hasher from './../Hasher';
+import { NodeSystemError } from '../../types/BuildTypes';
 
 export default abstract class Cacher {
   cachePath = '';
@@ -178,9 +179,19 @@ export default abstract class Cacher {
         if (!logAffected) Logger.log(2, stdout);
         return stdout;
       }
-      if (existsSync(outputPath)) {
-        rmSync(outputPath, { recursive: true, force: true });
-        mkdirSync(outputPath);
+      try {
+        const stats = await stat(outputPath);
+        if (stats.isDirectory()) {
+          await rm(outputPath, { recursive: true, force: true });
+          await mkdir(outputPath);
+        }
+      } catch (err) {
+        const nodeError = err as NodeSystemError;
+        if (nodeError.code !== 'ENOENT') {
+          Logger.log(2, err);
+          throw err;
+        }
+        await mkdir(outputPath);
       }
       return await this.pipeEnd(response, outputPath);
     } catch (error) {
