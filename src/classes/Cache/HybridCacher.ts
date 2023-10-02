@@ -83,7 +83,7 @@ export default class HybridCacher implements Cacher {
             if (err) {
                 reject?.(err);
             } else {
-                console.log(successMessage);
+                Logger.log(3, successMessage);
                 resolve?.();
             }
         };

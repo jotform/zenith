@@ -29,6 +29,7 @@ class ConfigManager {
   constructor() {
     const cacheType = process.env.CACHE_TYPE as CACHE_TYPES || CACHE_TYPES.LOCAL;
     if (!Object.values(CACHE_TYPES).includes(cacheType)) {
+      // eslint-disable-next-line no-console
       console.warn(`Invalid CACHE_TYPE value '${cacheType}', defaulting to '${CACHE_TYPES.LOCAL}'`);
     }
     this.config = {

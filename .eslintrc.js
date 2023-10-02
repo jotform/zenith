@@ -9,6 +9,7 @@ module.exports = {
   },
   root: true,
   rules: {
-    "semi": [2, "always"]
+    "semi": [2, "always"],
+    "no-console": 2
   }
 };

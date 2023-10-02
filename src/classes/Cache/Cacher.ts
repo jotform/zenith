@@ -167,7 +167,6 @@ export default abstract class Cacher {
   async recoverFromCache(originalHash: string, root: string, output: string, target: string, logAffected: boolean): Promise<string | boolean | void> {
     const isStdOut = isOutputTxt(output);
     if (isStdOut && logAffected) {
-      console.log('isStdOut && logAffected', isStdOut && logAffected);
       Logger.log(3, `${root} => Cached, output is text, and log affected is true. Not recovering from cache.`);
       return '';
     }
