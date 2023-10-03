@@ -23,6 +23,8 @@ export default class Runner {
 
   worker = '6';
 
+  skipPackageJson = false;
+
   constructor(...args: readonly string[]) {
     const program = new Command();
     program
@@ -33,6 +35,7 @@ export default class Runner {
       .option('-ch, --noCompareHash', 'default: false. If false, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.')
       .option('-la, --logAffected', 'default: false. If true, will log outputs of ONLY missed caches\' executes.')
       .option('-sd, --skipDependencies', 'default: false. If true, will skip dependencies and execute only the target.')
+      .option('-sp, --skipPackageJson', 'default: false. If true, will check package.json files before checking the cache and will skip the project if the target script is not in it.')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -74,6 +77,9 @@ export default class Runner {
     if (options.skipDependencies) {
       this.skipDependencies = true;
     }
+    if (options.skipPackageJson) {
+      this.skipPackageJson = true;
+    }
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
 
@@ -88,7 +94,8 @@ export default class Runner {
       compareHash: this.compareHash,
       logAffected: this.logAffected,
       skipDependencies: this.skipDependencies,
-      debugLocation: this.debugLocation
+      debugLocation: this.debugLocation,
+      skipPackageJson: this.skipPackageJson
     });
     Logger.log(2, `Zenith ${this.command} started.`);
     if (this.project === 'all') {
