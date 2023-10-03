@@ -49,7 +49,7 @@ const zipDir = async (dir, zippedDir) => {
     }
     else {
       const data = await fs.promises.readFile(entry.path);
-      zippedDir.file(parsedEntryPath.base, data.toString());
+      zippedDir.file(parsedEntryPath.base, data);
     }
   }
 };
