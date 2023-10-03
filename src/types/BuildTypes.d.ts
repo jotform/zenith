@@ -10,6 +10,7 @@ export interface BuildParams {
   logAffected: boolean;
   skipDependencies: boolean;
   debugLocation: string;
+  skipPackageJson: boolean;
 }
 
 export interface PackageJsonType {

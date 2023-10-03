@@ -36,6 +36,8 @@ export default class BuildHelper extends WorkerHelper {
 
   skipDependencies = false;
 
+  skipPackageJson = false;
+
   debugLocation = 'debug/';
 
   startTime: [number, number] = [0, 0];
@@ -53,12 +55,13 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async init({
-    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation
+    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation, skipPackageJson
   }: BuildParams) : Promise<void> {
     this.compareHash = compareHash;
     this.logAffected = logAffected;
     this.skipDependencies = skipDependencies;
     this.debugLocation = debugLocation;
+    this.skipPackageJson = skipPackageJson;
     this.startTime = process.hrtime();
     if (debug) {
       this.debug = debug;
@@ -142,6 +145,11 @@ export default class BuildHelper extends WorkerHelper {
     return list;
   }
 
+  doesScriptExist(root: string, script: string): boolean {
+    const packageJSON = JSON.parse(readFileSync(path.join(ROOT_PATH, root, 'package.json'), { encoding: 'utf-8' })) as PackageJsonType;
+    return !!packageJSON.scripts?.[script];
+  }
+
   buildResolver(project: string): void {
     this.removeProject(project);
     this.build();
@@ -161,6 +169,12 @@ export default class BuildHelper extends WorkerHelper {
         };
       }
       const { outputs, script, constantDependencies, compareRemoteHashes, requiredFiles } = config[this.command];
+
+      if (this.skipPackageJson && !this.doesScriptExist(root, script)) {
+        Logger.log(3, 'Skipping project => ', buildProject, ' because it does not have the script => ', script);
+        this.buildResolver(buildProject);
+        return;
+      }
       const buildPath = path.join(ROOT_PATH, root);
       const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
       const isCached = await this.cacher.isCached(hash, root, outputs, script);
