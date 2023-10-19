@@ -15,6 +15,7 @@ type ZenithConfig = {
   S3_ENDPOINT: string | undefined,
   S3_REGION: string,
   ZENITH_DEBUG_ID: string,
+  ZENITH_NO_CACHE: boolean,
   LOCAL_CACHE_PATH: string
 };
 
@@ -42,6 +43,7 @@ class ConfigManager {
       S3_ENDPOINT: process.env.S3_ENDPOINT,
       S3_REGION: process.env.S3_REGION || 'us-east-1',
       ZENITH_DEBUG_ID: process.env.ZENITH_DEBUG_ID || 'debug-log',
+      ZENITH_NO_CACHE: Boolean(process.env.ZENITH_NO_CACHE) || false,
       LOCAL_CACHE_PATH: process.env.LOCAL_CACHE_PATH || '.cache'
     };
   }

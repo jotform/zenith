@@ -11,6 +11,7 @@ export interface BuildParams {
   skipDependencies: boolean;
   debugLocation: string;
   skipPackageJson: boolean;
+  noCache: boolean;
 }
 
 export interface PackageJsonType {

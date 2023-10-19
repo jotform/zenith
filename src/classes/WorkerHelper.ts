@@ -20,9 +20,9 @@ export default class WorkerHelper {
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 
-  async execute(buildPath: string, command: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined) : Promise<{[output: string]: string } | Error> {
+  async execute(buildPath: string, command: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache: boolean = false) : Promise<{[output: string]: string } | Error> {
     try {
-      const execution =  await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName, requiredFiles], {
+      const execution =  await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName, requiredFiles, noCache], {
         on: message => Logger.log(3, message)
       }) as {[output: string]: string} | Error;
       if (execution instanceof Error) throw new Error('Executing worker failed');

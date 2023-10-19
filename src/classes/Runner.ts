@@ -36,6 +36,7 @@ export default class Runner {
       .option('-la, --logAffected', 'default: false. If true, will log outputs of ONLY missed caches\' executes.')
       .option('-sd, --skipDependencies', 'default: false. If true, will skip dependencies and execute only the target.')
       .option('-sp, --skipPackageJson', 'default: false. If true, will check package.json files before checking the cache and will skip the project if the target script is not in it.')
+      .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -80,6 +81,12 @@ export default class Runner {
     if (options.skipPackageJson) {
       this.skipPackageJson = true;
     }
+    if (options.noCache) {
+      configManagerInstance.updateConfig({ 
+        ZENITH_NO_CACHE: true,
+        ZENITH_READ_ONLY: true
+      });
+    }
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
 
@@ -95,7 +102,8 @@ export default class Runner {
       logAffected: this.logAffected,
       skipDependencies: this.skipDependencies,
       debugLocation: this.debugLocation,
-      skipPackageJson: this.skipPackageJson
+      skipPackageJson: this.skipPackageJson,
+      noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE')
     });
     Logger.log(2, `Zenith ${this.command} started.`);
     if (this.project === 'all') {

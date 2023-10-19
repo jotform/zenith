@@ -9,7 +9,7 @@ import { configManagerInstance } from './config';
 import { ExecError } from './types/BuildTypes';
 import HybridCacher from './classes/Cache/HybridCacher';
 
-const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined): Promise<{[output: string]: string} | Error> => {
+const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache: boolean = false): Promise<{[output: string]: string} | Error> => {
   try {
     const cacher = CacherFactory.getCacher();
     if (buildPath === undefined) throw new Error('Build path is undefined while trying to build!');
@@ -17,6 +17,7 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     if (project === undefined) throw new Error('Could not read build path in execute method!');
     workerpool.workerEmit(`Running ${targetCommand} command for => ${project}`);
     const commandOutput = execSync(`pnpm --filter ${projectName} ${targetCommand}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
+    if (noCache) return { output: commandOutput };
     await Promise.all(outputs.map(output => cacher.cache(hash, root, output, targetCommand, commandOutput, requiredFiles)));
     await Promise.all(outputs.map(output => cacher.sendOutputHash(hash, root, output, targetCommand)));
     if (!configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) {

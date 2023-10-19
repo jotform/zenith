@@ -46,6 +46,8 @@ export default class BuildHelper extends WorkerHelper {
 
   compareWith = '';
 
+  noCache = false;
+
   cacher: RemoteCacher | LocalCacher;
 
   constructor(command : string, worker : string) {
@@ -55,13 +57,14 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async init({
-    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation, skipPackageJson
+    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation, skipPackageJson, noCache
   }: BuildParams) : Promise<void> {
     this.compareHash = compareHash;
     this.logAffected = logAffected;
     this.skipDependencies = skipDependencies;
     this.debugLocation = debugLocation;
     this.skipPackageJson = skipPackageJson;
+    this.noCache = noCache;
     this.startTime = process.hrtime();
     if (debug) {
       this.debug = debug;
@@ -176,6 +179,12 @@ export default class BuildHelper extends WorkerHelper {
         return;
       }
       const buildPath = path.join(ROOT_PATH, root);
+      if (this.noCache) {
+        await this.execute(buildPath, script, '', root, outputs, buildProject, requiredFiles, this.noCache);
+        this.built++;
+        this.buildResolver(buildProject);
+        return;
+      }
       const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
       const isCached = await this.cacher.isCached(hash, root, outputs, script);
       if (this.compareWith) {
@@ -240,7 +249,7 @@ export default class BuildHelper extends WorkerHelper {
     if (!projects.length) {
       if (!stats.pendingTasks && !stats.activeTasks) {
         void this.pool.terminate();
-        Logger.log(2, `Zenith completed command: ${this.command}.`);
+        Logger.log(2, `Zenith completed command: ${this.command}. ${this.noCache ? '(Cache was not used)' : ''}`);
         Logger.log(2, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
         Logger.log(2, `${this.fromCache} projects used from cache,`);
         Logger.log(2, `${this.built} projects used without cache.`);
