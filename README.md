@@ -1,6 +1,24 @@
-# Zenith: New way of JS monorepo builds <!-- omit in toc -->
-Welcome to Zenith, a lightning-fast javascript monorepo build tool designed to minimize your tasks' runtime and maximize your productivity. If you're a monorepo user, you know how challenging it can be to keep track of multiple codebases, dependencies, and versioning across various projects. That's where Zenith comes in: our powerful platform provides a way to manage builds, tests, lints, and other tasks for all your projects, making it easy to achieve CI pipelines that take seconds without even needing any version control, such as Git. With Zenith, you can focus on what really matters - building great software. So whether you're a developer, project manager, or part of a large development team, Zenith is the perfect tool to help you stay fast, efficient, and ahead of the game.
+# Zenith: Lightning-Fast JavaScript Monorepo Build Tool <!-- omit in toc -->
 
+**Zenith** transforms the complexity of managing JavaScript monorepos into a simple, fast, and productive experience. By smartly caching without .git reliance, Zenith slashes CI pipeline times, letting you focus solely on coding.
+
+## Quick Start
+
+-   **Install:** `pnpm add @jotforminc/zenith`
+-   **Use:** `pnpm zenith --target=<command> --project=<name>`
+
+## Configuration with `zenith.json`
+
+Create a `zenith.json` in your project root including `projects` and `buildConfig` to guide Zenith's operation.
+
+## Features
+
+-   **Local & Remote Caching:** Deploy faster using less bandwidth.
+-   **No .git Required:** Ideal for team-based monorepo development.
+-   **Versatile Commands:** Supports `build`, `test`, and more.
+
+------
+#### Detailed Setup
 
 ## Table of contents <!-- omit in toc -->
 - [What is Zenith? What is its aim?](#what-is-zenith-what-is-its-aim)
