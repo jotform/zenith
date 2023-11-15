@@ -9,7 +9,7 @@ import { configManagerInstance } from './config';
 import { ExecError } from './types/BuildTypes';
 import HybridCacher from './classes/Cache/HybridCacher';
 
-const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache: boolean = false): Promise<{[output: string]: string} | Error> => {
+const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache = false): Promise<{[output: string]: string} | Error> => {
   try {
     const cacher = CacherFactory.getCacher();
     if (buildPath === undefined) throw new Error('Build path is undefined while trying to build!');
