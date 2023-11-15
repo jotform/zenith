@@ -179,6 +179,11 @@ export default class BuildHelper extends WorkerHelper {
         return;
       }
       const buildPath = path.join(ROOT_PATH, root);
+      if (isCommandDummy(buildPath, script)) {
+        Logger.log(3, 'Skipping project => ', buildProject, ' because it is a dummy script (return value is true).');
+        this.buildResolver(buildProject);
+        return;
+      }
       if (this.noCache) {
         await this.execute(buildPath, script, '', root, outputs, buildProject, requiredFiles, this.noCache);
         this.built++;
