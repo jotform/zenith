@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
 import {
@@ -18,7 +18,7 @@ class ConfigHelper {
     const config = JSON.parse(readFileSync(path.join(ROOT_PATH, 'zenith.json'), { encoding: 'utf-8' })) as ZenithConfigType;
     this.buildConfigJSON = config.buildConfig;
     this.projects = config.projects;
-    this.ignoreFiles = config.ignore;
+    this.ignoreFiles = this.getIgnoreFiles(config.ignore);
     this.appDirectories = config.appDirectories;
   }
 
@@ -30,6 +30,22 @@ class ConfigHelper {
   getCachePath(): string {
     if (typeof this.buildConfigJSON.cachePath === 'string') return this.buildConfigJSON.cachePath;
     return '.cache';
+  }
+
+  getIgnoreFiles(ignore: Array<string>): Array<string> {
+    const ignoreFiles: string[] = [];
+    const gitIgnorePath = path.join(ROOT_PATH, '.gitignore');
+    if (existsSync(gitIgnorePath)) {
+      const gitIgnore = readFileSync(gitIgnorePath, { encoding: 'utf-8' });
+      gitIgnore.split('\n').forEach((line) => {
+        if (line && !line.startsWith('#') && !ignoreFiles.includes(line)) ignoreFiles.push(line);
+      });
+    }
+    ignore.forEach((dir) => {
+      if (dir && !ignoreFiles.includes(dir)) ignoreFiles.push(dir);
+    });
+
+    return ignoreFiles;
   }
 }
 
