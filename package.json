@@ -1,6 +1,6 @@
 {
   "name": "@jotforminc/zenith",
-  "packageManager": "pnpm@7.18.0",
+  "packageManager": "yarn@1.22.21",
   "version": "1.5.2",
   "description": "",
   "main": "./build/index.js",
