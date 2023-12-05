@@ -172,13 +172,15 @@ export default class BuildHelper extends WorkerHelper {
         };
       }
       const { outputs, script, constantDependencies, compareRemoteHashes, requiredFiles } = config[this.command];
+      const buildPath = path.join(ROOT_PATH, root);
+      const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
+      Hasher.hashJSON[buildProject] = hash;
 
       if (this.skipPackageJson && !this.doesScriptExist(root, script)) {
         Logger.log(3, 'Skipping project => ', buildProject, ' because it does not have the script => ', script);
         this.buildResolver(buildProject);
         return;
       }
-      const buildPath = path.join(ROOT_PATH, root);
       if (isCommandDummy(buildPath, script)) {
         Logger.log(3, 'Skipping project => ', buildProject, ' because it is a dummy script (return value is true).');
         this.buildResolver(buildProject);
@@ -190,7 +192,6 @@ export default class BuildHelper extends WorkerHelper {
         this.buildResolver(buildProject);
         return;
       }
-      const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
       const isCached = await this.cacher.isCached(hash, root, outputs, script);
       if (this.compareWith) {
         const [changedFiles, newFiles] = Hasher.getUpdatedHashes();
@@ -237,7 +238,6 @@ export default class BuildHelper extends WorkerHelper {
           }
         }
       }
-      Hasher.hashJSON[buildProject] = hash;
       this.buildResolver(buildProject);
     } catch (error) {
       if (error instanceof Error) {
