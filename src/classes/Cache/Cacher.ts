@@ -47,34 +47,26 @@ export default abstract class Cacher {
 
   abstract getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>>
   abstract updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string): void
-  sendOutputHash(hash: string, root: string, output: string, target: string): Promise<void> | undefined {
+
+  async sendOutputHash(hash: string, root: string, output: string, target: string): Promise<void> {
     if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
-    return new Promise<void>((resolve, reject) => {
-      try {
-        const cachePath = `${target}/${hash}/${root}`;
-        const directoryPath = path.join(ROOT_PATH, root, !isOutputTxt(output) ? output : '');
-        if (!existsSync(directoryPath)) {
-          resolve();
-          return;
-        }
-        const outputHash = Hasher.getHash(directoryPath);
-        const outputBuff = Buffer.from(outputHash);
-        this.putObject(
-          {
-            Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-            Key: `${cachePath}/${output}-hash.txt`,
-            Body: outputBuff
-          }).then(() => {
-            Logger.log(3, 'Hash successfully stored');
-            resolve();
-          }).catch((err) => {
-            Logger.log(2, err);
-            reject(err);
-          });
-      } catch (error) {
-        Logger.log(2, error);
-      }
-    });
+    try {
+      const cachePath = `${target}/${hash}/${root}`;
+      const directoryPath = path.join(ROOT_PATH, root, !isOutputTxt(output) ? output : '');
+      const outputHash = Hasher.getHash(directoryPath);
+      const outputBuff = Buffer.from(outputHash);
+      await this.putObject({
+        Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+        Key: `${cachePath}/${output}-hash.txt`,
+        Body: outputBuff
+      });
+      Logger.log(3, 'Hash successfully stored');
+    } catch (error) {
+      if (error instanceof Error) throw error;
+      if (typeof error === 'string') throw new Error(error);
+      Logger.log(2, error);
+      throw new Error();
+    }
   }
 
   async cacheZip(cachePath: string, output: string, directoryPath: string) {
@@ -93,19 +85,16 @@ export default abstract class Cacher {
     }
   }
 
-  cacheTxt(cachePath: string, output: string, commandOutput: string) {
-    return new Promise<void>((resolve, reject) => {
-      this.putObject({
+  async cacheTxt(cachePath: string, output: string, commandOutput: string) {
+    try {
+      await this.putObject({
         Key: `${cachePath}/${output}.txt`,
         Body: commandOutput
-      }).then(() => {
-        Logger.log(3, 'Txt Cache successfully stored');
-        resolve();
-      }).catch((err) => {
-        Logger.log(2, err);
-        reject(err);
       });
-    });
+      Logger.log(3, 'Txt Cache successfully stored');
+    } catch (error) {
+      Logger.log(2, error);
+    }
   }
 
   async cache(hash: string, root: string, output: string, target: string, commandOutput: string, requiredFiles: string[] | undefined) {
