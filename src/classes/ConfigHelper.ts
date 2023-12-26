@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../utils/constants';
 import {
-  ProjectConfig, BuildConfig, TargetObject, ZenithConfigType
+  ProjectConfig, BuildConfig, TargetObject, ZenithConfigType, PipeConfigArray
 } from '../types/ConfigTypes';
 
 class ConfigHelper {
@@ -10,13 +10,16 @@ class ConfigHelper {
 
   projects: ProjectConfig;
 
-  ignoreFiles: Array<string>;
+  ignoreFiles: string[];
 
-  appDirectories: Array<string>;
+  appDirectories: string[];
+
+  pipe: PipeConfigArray;
 
   constructor() {
     const config = JSON.parse(readFileSync(path.join(ROOT_PATH, 'zenith.json'), { encoding: 'utf-8' })) as ZenithConfigType;
     this.buildConfigJSON = config.buildConfig;
+    this.pipe = config.pipe;
     this.projects = config.projects;
     this.ignoreFiles = this.getIgnoreFiles(config.ignore);
     this.appDirectories = config.appDirectories;
@@ -32,7 +35,7 @@ class ConfigHelper {
     return '.cache';
   }
 
-  getIgnoreFiles(ignore: Array<string>): Array<string> {
+  getIgnoreFiles(ignore: string[]): string[] {
     const ignoreFiles: string[] = [];
     const gitIgnorePath = path.join(ROOT_PATH, '.gitignore');
     if (existsSync(gitIgnorePath)) {

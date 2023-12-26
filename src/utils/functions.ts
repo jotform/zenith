@@ -73,3 +73,11 @@ export const readableToBuffer = async (readable: Readable): Promise<Buffer> => {
     });
   });
 };
+
+export const deepCloneMap = <K>(map: Map<K, Set<string>>): Map<K, Set<string>> => {
+  const newMap = new Map<K, Set<string>>();
+  map.forEach((value, key) => {
+    newMap.set(key, new Set(JSON.parse(JSON.stringify(Array.from(value))) as string[]));
+  });
+  return newMap;
+};

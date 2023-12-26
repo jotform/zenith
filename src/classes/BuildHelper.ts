@@ -6,7 +6,7 @@ import CacherFactory from './Cache/CacheFactory';
 import Hasher from './Hasher';
 import WorkerHelper from './WorkerHelper';
 import ConfigHelper from './ConfigHelper';
-import { formatMissingProjects, formatTimeDiff, isCommandDummy, isOutputTxt } from '../utils/functions';
+import { deepCloneMap, formatMissingProjects, formatTimeDiff, isCommandDummy, isOutputTxt } from '../utils/functions';
 import Logger from '../utils/logger';
 import { ProjectStats, BuildParams, PackageJsonType } from '../types/BuildTypes';
 import LocalCacher from './Cache/LocalCacher';
@@ -17,6 +17,8 @@ export default class BuildHelper extends WorkerHelper {
   projects : Map<string, Set<string>> = new Map();
 
   command : string;
+
+  projectToBuild = '';
 
   totalCount = 0;
 
@@ -62,7 +64,7 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async init({
-    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation, skipPackageJson, noCache
+    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation, skipPackageJson, noCache, project, workspace
   }: BuildParams) : Promise<void> {
     this.compareHash = compareHash;
     this.logAffected = logAffected;
@@ -71,12 +73,26 @@ export default class BuildHelper extends WorkerHelper {
     this.skipPackageJson = skipPackageJson;
     this.noCache = noCache;
     this.startTime = process.hrtime();
+    this.projectToBuild = project || 'all';
+    if (workspace.size > 0) {
+      this.projects = deepCloneMap(workspace);
+    } else {
+      if (this.projectToBuild === 'all') {
+        this.buildAll();
+      } else {
+        this.addProject(this.projectToBuild);
+      }
+    }
     if (debug) {
       this.debug = debug;
       this.compareWith = compareWith;
       const debugJSON = await this.cacher.getDebugFile(compareWith, this.command, debugLocation) || {};
       this.hasher.updateDebugJSON(debugJSON);
     }
+  }
+
+  getProjects(): Map<string, Set<string>> {
+    return this.projects;
   }
 
   addProject(project: string): void {
