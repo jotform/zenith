@@ -52,10 +52,13 @@ export default class BuildHelper extends WorkerHelper {
 
   hasher = new Hasher();
 
+  outputColor = '';
+
   constructor(command : string, worker : string) {
     super(command, worker);
     this.command = command;
     this.cacher = CacherFactory.getCacher();
+    this.outputColor = `\x1b[3${Math.floor(Math.random() * 7) + 1}m`;
   }
 
   async init({
@@ -93,7 +96,7 @@ export default class BuildHelper extends WorkerHelper {
         });
       } catch (error) {
         if (error instanceof Error) {
-          Logger.log(2, 'Package.json file not found in the project!');
+          Logger.log(2, this.outputColor, 'Package.json file not found in the project!');
           throw error;
         } else {
           throw error;
@@ -179,13 +182,13 @@ export default class BuildHelper extends WorkerHelper {
       this.hasher.hashJSON[buildProject] = hash;
 
       if (this.skipPackageJson && !this.doesScriptExist(root, script)) {
-        Logger.log(3, 'Skipping project => ', buildProject, ' because it does not have the script => ', script);
-        this.buildResolver(buildProject);
+        Logger.log(3, this.outputColor, 'Skipping project => ', buildProject, ' because it does not have the script => ', script);
+        await this.buildResolver(buildProject);
         return;
       }
       if (isCommandDummy(buildPath, script)) {
-        Logger.log(3, 'Skipping project => ', buildProject, ' because it is a dummy script (return value is true).');
         this.buildResolver(buildProject);
+        Logger.log(3, this.outputColor, 'Skipping project => ', buildProject, ' because it is a dummy script (return value is true).');
         return;
       }
       if (this.noCache) {
@@ -198,7 +201,7 @@ export default class BuildHelper extends WorkerHelper {
       if (this.compareWith) {
         const [changedFiles, newFiles] = this.hasher.getUpdatedHashes();
         if (changedFiles.length || newFiles.length) {
-          Logger.log(3, `Hash mismatched: \n Changed files => \n - ${changedFiles.join('\n')} \n New files => \n - ${newFiles.join('\n')}`);
+          Logger.log(3, this.outputColor, `Hash mismatched: \n Changed files => \n - ${changedFiles.join('\n')} \n New files => \n - ${newFiles.join('\n')}`);
           this.hasher.emptyUpdatedHashes();
         }
       }
@@ -206,7 +209,7 @@ export default class BuildHelper extends WorkerHelper {
         const startTime = process.hrtime();
         const output = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
         if (!isCommandDummy(buildPath, script)) {
-          Logger.log(2, 'Cache does not exist for => ', buildProject, hash);
+          Logger.log(2, this.outputColor, 'Cache does not exist for => ', buildProject, hash);
           this.missingProjects.push({ buildProject, time: process.hrtime(startTime) });
         }
         if (output instanceof Error) {
@@ -214,13 +217,13 @@ export default class BuildHelper extends WorkerHelper {
           throw output;
         }
         if (output && isOutputTxt(outputs)) {
-          Logger.log(2, output.output);
+          Logger.log(2, this.outputColor, output.output);
         }
         this.built++;
       } else if (outputs.length) {
         for (const output of outputs) {
           // const outputPath = path.join(ROOT_PATH, root, output);
-          Logger.log(3, 'Recovering from cache', buildProject, 'with hash => ', hash);
+          Logger.log(3, this.outputColor, 'Recovering from cache', buildProject, 'with hash => ', hash);
           const startTime = process.hrtime();
           const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash && !!compareRemoteHashes, this.logAffected);
           if (recoverResponse instanceof Error) {
@@ -243,7 +246,7 @@ export default class BuildHelper extends WorkerHelper {
       this.buildResolver(buildProject);
     } catch (error) {
       if (error instanceof Error) {
-        Logger.log(3, 'ERR-B1 :: project: ', buildProject, ' error: ', error.message);
+        Logger.log(3, this.outputColor, 'ERR-B1 :: project: ', buildProject, ' error: ', error.message);
         await this.pool.terminate(true);
         throw error;
       } else throw new Error('Builder failed.');
@@ -256,23 +259,23 @@ export default class BuildHelper extends WorkerHelper {
     if (!projects.length) {
       if (!stats.pendingTasks && !stats.activeTasks) {
         void this.pool.terminate();
-        Logger.log(2, `Zenith completed command: ${this.command}. ${this.noCache ? '(Cache was not used)' : ''}`);
-        Logger.log(2, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
-        Logger.log(2, `${this.fromCache} projects used from cache,`);
-        Logger.log(2, `${this.built} projects used without cache.`);
+        Logger.log(2, this.outputColor, `Zenith completed command: ${this.command}. ${this.noCache ? '(Cache was not used)' : ''}`);
+        Logger.log(2, this.outputColor, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
+        Logger.log(2, this.outputColor, `${this.fromCache} projects used from cache,`);
+        Logger.log(2, this.outputColor, `${this.built} projects used without cache.`);
         if (this.missingProjects.length > 0) {
-          Logger.log(2, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
+          Logger.log(2, this.outputColor, `Cache is missing for following projects => ${formatMissingProjects(this.missingProjects)}`);
         }
         if (this.slowCacheRecoveries.length > 0) {
-          Logger.log(2, `Cache recovered slowly for following projects => ${formatMissingProjects(this.slowCacheRecoveries)}`);
+          Logger.log(2, this.outputColor, `Cache recovered slowly for following projects => ${formatMissingProjects(this.slowCacheRecoveries)}`);
         }
         if (this.hashMismatchProjects.length > 0) {
-          Logger.log(2, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
+          Logger.log(2, this.outputColor, `Hashes mismatched for following projects => ${formatMissingProjects(this.hashMismatchProjects)}`);
         }
-        Logger.log(2, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
+        Logger.log(2, this.outputColor, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
         if (this.debug && configManagerInstance.getConfigValue('ZENITH_DEBUG_ID')) {
-          Logger.log(2, 'DEBUG JSON UPDATED');
           this.cacher.updateDebugFile(this.hasher.getDebugJSON(), this.command, this.debugLocation);
+          Logger.log(2, this.outputColor, 'DEBUG JSON UPDATED');
         }
       }
       return;
