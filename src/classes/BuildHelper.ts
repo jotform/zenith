@@ -158,9 +158,9 @@ export default class BuildHelper extends WorkerHelper {
     return !!packageJSON.scripts?.[script];
   }
 
-  buildResolver(project: string): void {
+  async buildResolver(project: string): Promise<void> {
     this.removeProject(project);
-    this.build();
+    await this.build();
   }
 
   async builder(buildProject: string) {
@@ -187,14 +187,14 @@ export default class BuildHelper extends WorkerHelper {
         return;
       }
       if (isCommandDummy(buildPath, script)) {
-        this.buildResolver(buildProject);
         Logger.log(3, this.outputColor, 'Skipping project => ', buildProject, ' because it is a dummy script (return value is true).');
+        await this.buildResolver(buildProject);
         return;
       }
       if (this.noCache) {
         await this.execute(buildPath, script, '', root, outputs, buildProject, requiredFiles, this.noCache);
         this.built++;
-        this.buildResolver(buildProject);
+        await this.buildResolver(buildProject);
         return;
       }
       const isCached = await this.cacher.isCached(hash, root, outputs, script);
@@ -243,7 +243,7 @@ export default class BuildHelper extends WorkerHelper {
           }
         }
       }
-      this.buildResolver(buildProject);
+      await this.buildResolver(buildProject);
     } catch (error) {
       if (error instanceof Error) {
         Logger.log(3, this.outputColor, 'ERR-B1 :: project: ', buildProject, ' error: ', error.message);
@@ -253,7 +253,7 @@ export default class BuildHelper extends WorkerHelper {
     }
   }
 
-  build(): void {
+  async build(): Promise<void> {
     const projects = this.dependencyFreeProjects;
     const stats = this.pool.stats();
     if (!projects.length) {
@@ -280,11 +280,11 @@ export default class BuildHelper extends WorkerHelper {
       }
       return;
     }
-    for (const eachProject of projects) {
+    await Promise.all(projects.map(async eachProject => {
       if (!this.started.has(eachProject)) {
         this.started.add(eachProject);
-        void this.builder(eachProject);
+        await this.builder(eachProject);
       }
-    }
+    }));
   }
 }

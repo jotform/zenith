@@ -111,6 +111,7 @@ export default class Runner {
     } else {
       Builder.addProject(this.project);
     }
-    Builder.build();
+    Logger.log(2, `Zenith ${command} started.`);
+    await Builder.build();
   }
 }
