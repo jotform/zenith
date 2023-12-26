@@ -113,5 +113,4 @@ export class Hasher {
   }
 }
 
-const HasherInstance = new Hasher();
-export default HasherInstance;
+export default Hasher;

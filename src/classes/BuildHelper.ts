@@ -50,6 +50,8 @@ export default class BuildHelper extends WorkerHelper {
 
   cacher: RemoteCacher | LocalCacher;
 
+  hasher = new Hasher();
+
   constructor(command : string, worker : string) {
     super(command, worker);
     this.command = command;
@@ -70,7 +72,7 @@ export default class BuildHelper extends WorkerHelper {
       this.debug = debug;
       this.compareWith = compareWith;
       const debugJSON = await this.cacher.getDebugFile(compareWith, this.command, debugLocation) || {};
-      Hasher.updateDebugJSON(debugJSON);
+      this.hasher.updateDebugJSON(debugJSON);
     }
   }
 
@@ -173,8 +175,8 @@ export default class BuildHelper extends WorkerHelper {
       }
       const { outputs, script, constantDependencies, compareRemoteHashes, requiredFiles } = config[this.command];
       const buildPath = path.join(ROOT_PATH, root);
-      const hash = Hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
-      Hasher.hashJSON[buildProject] = hash;
+      const hash = this.hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies);
+      this.hasher.hashJSON[buildProject] = hash;
 
       if (this.skipPackageJson && !this.doesScriptExist(root, script)) {
         Logger.log(3, 'Skipping project => ', buildProject, ' because it does not have the script => ', script);
@@ -194,10 +196,10 @@ export default class BuildHelper extends WorkerHelper {
       }
       const isCached = await this.cacher.isCached(hash, root, outputs, script);
       if (this.compareWith) {
-        const [changedFiles, newFiles] = Hasher.getUpdatedHashes();
+        const [changedFiles, newFiles] = this.hasher.getUpdatedHashes();
         if (changedFiles.length || newFiles.length) {
           Logger.log(3, `Hash mismatched: \n Changed files => \n - ${changedFiles.join('\n')} \n New files => \n - ${newFiles.join('\n')}`);
-          Hasher.emptyUpdatedHashes();
+          this.hasher.emptyUpdatedHashes();
         }
       }
       if (!isCached) {
@@ -269,8 +271,8 @@ export default class BuildHelper extends WorkerHelper {
         }
         Logger.log(2, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
         if (this.debug && configManagerInstance.getConfigValue('ZENITH_DEBUG_ID')) {
-          this.cacher.updateDebugFile(Hasher.getDebugJSON(), this.command, this.debugLocation);
           Logger.log(2, 'DEBUG JSON UPDATED');
+          this.cacher.updateDebugFile(this.hasher.getDebugJSON(), this.command, this.debugLocation);
         }
       }
       return;

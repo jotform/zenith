@@ -13,6 +13,7 @@ import { NodeSystemError } from '../../types/BuildTypes';
 
 export default abstract class Cacher {
   cachePath = '';
+  hasher = new Hasher();
 
   abstract putObject({Bucket, Key, Body}: {Bucket?: string,Key: string, Body: Buffer | string}): Promise<void>
   abstract getObject({Bucket, Key}: {Bucket?: string,Key: string}): Promise<Readable>
@@ -57,7 +58,7 @@ export default abstract class Cacher {
           resolve();
           return;
         }
-        const outputHash = Hasher.getHash(directoryPath);
+        const outputHash = this.hasher.getHash(directoryPath);
         const outputBuff = Buffer.from(outputHash);
         this.putObject(
           {
@@ -144,7 +145,7 @@ export default abstract class Cacher {
       const buff = await readableToBuffer(stream);
       const unzipped = await Zipper.unzip(buff);
       await unzipped.save(outputPath);
-      const hash = Hasher.getHash(outputPath);
+      const hash = this.hasher.getHash(outputPath);
       return hash;
     } catch (error) {
       Logger.log(2, error);

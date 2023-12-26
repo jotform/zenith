@@ -7,9 +7,11 @@ import { NodeSystemError } from '../../types/BuildTypes';
 import { configManagerInstance } from '../../config';
 import Cacher from './Cacher';
 import { Readable } from 'stream';
+import Hasher from '../Hasher';
 
 class LocalCacher extends Cacher {
   cachePath = '';
+  hasher = new Hasher();
 
   constructor() {
     super();

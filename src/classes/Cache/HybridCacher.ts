@@ -4,10 +4,12 @@ import LocalCacher from "./LocalCacher";
 import { Readable } from "stream";
 import { DebugJSON } from "../../types/ConfigTypes";
 import Logger from "../../utils/logger";
+import Hasher from "../Hasher";
 
 export default class HybridCacher implements Cacher {
     cachePath = '';
     cachers: Cacher[] = [];
+    hasher = new Hasher();
 
     constructor(type: 'local-first' | 'remote-first') {
         if (type === 'local-first') {
