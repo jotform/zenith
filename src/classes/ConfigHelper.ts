@@ -17,7 +17,8 @@ class ConfigHelper {
   pipe: PipeConfigArray;
 
   constructor() {
-    const config = JSON.parse(readFileSync(path.join(ROOT_PATH, 'zenith.json'), { encoding: 'utf-8' })) as ZenithConfigType;
+    const configPath = process.env.ZENITH_CONFIG_PATH || 'zenith.json';
+    const config = JSON.parse(readFileSync(path.join(ROOT_PATH, configPath), { encoding: 'utf-8' })) as ZenithConfigType;
     this.buildConfigJSON = config.buildConfig;
     this.pipe = config.pipe;
     this.projects = config.projects;
