@@ -17,7 +17,6 @@ export default abstract class Cacher {
 
   abstract putObject({Bucket, Key, Body}: {Bucket?: string,Key: string, Body: Buffer | string}): Promise<void>
   abstract getObject({Bucket, Key}: {Bucket?: string,Key: string}): Promise<Readable>
-  abstract listObjects({Bucket, Prefix}: {Bucket?: string, Prefix: string}): Promise<string[]>
 
   isHybrid() {
     return false;
@@ -200,10 +199,14 @@ export default abstract class Cacher {
       }
       return await this.pipeEnd(response, outputPath);
     } catch (error) {
+      const nodeError = error as { $metadata: { httpStatusCode: number } };
+      if (nodeError.$metadata.httpStatusCode === 404) {
+        return 'Cache not found';
+      }
       if (!error) {
         return false;
       }
-      Logger.log(2, error);
+      Logger.log(2, 'error', );
     }
   }
 
@@ -219,26 +222,6 @@ export default abstract class Cacher {
     } catch (error) {
       Logger.log(2, error);
     }
-  }
-
-  async isCached(hash: string, root: string, outputs: Array<string>, target: string) {
-    const cachedFolder = await this.listObjects({
-      Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-      Prefix: `${target}/${hash}/${root}`
-    });
-    if (cachedFolder) {
-      for (const output of outputs) {
-        // TODO: find a better, more generalized way for extensions
-        const cachePath = `${target}/${hash}/${root}/${output}.${
-          isOutputTxt(output) ? 'txt' : 'zip'
-        }`;
-        if (!cachedFolder.includes(cachePath)) {
-          return false;
-        }
-      }
-      return true;
-    }
-    return false;
   }
 
 }

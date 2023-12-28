@@ -174,6 +174,22 @@ export default class BuildHelper extends WorkerHelper {
     return !!packageJSON.scripts?.[script];
   }
 
+  async runTarget(buildPath: string, script: string, hash: string, root: string, outputs: Array<string>, buildProject: string, requiredFiles?: string[]): Promise<void> {
+    const startTime = process.hrtime();
+    const output = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
+    if (!isCommandDummy(buildPath, script)) {
+      Logger.log(2, this.outputColor, 'Cache does not exist for => ', buildProject, hash);
+      this.missingProjects.push({ buildProject, time: process.hrtime(startTime) });
+    }
+    if (output instanceof Error) {
+      throw output;
+    }
+    if (output && isOutputTxt(outputs)) {
+      Logger.log(2, this.outputColor, output.output);
+    }
+    this.built++;
+  }
+
   async buildResolver(project: string): Promise<void> {
     this.removeProject(project);
     await this.build();
@@ -213,7 +229,7 @@ export default class BuildHelper extends WorkerHelper {
         await this.buildResolver(buildProject);
         return;
       }
-      const isCached = await this.cacher.isCached(hash, root, outputs, script);
+      // const isCached = await this.cacher.isCached(hash, root, outputs, script);
       if (this.compareWith) {
         const [changedFiles, newFiles] = this.hasher.getUpdatedHashes();
         if (changedFiles.length || newFiles.length) {
@@ -221,41 +237,27 @@ export default class BuildHelper extends WorkerHelper {
           this.hasher.emptyUpdatedHashes();
         }
       }
-      if (!isCached) {
+      for (const output of outputs) {
+        Logger.log(3, this.outputColor, 'Recovering from cache', buildProject, 'with hash => ', hash);
         const startTime = process.hrtime();
-        const output = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
-        if (!isCommandDummy(buildPath, script)) {
-          Logger.log(2, this.outputColor, 'Cache does not exist for => ', buildProject, hash);
-          this.missingProjects.push({ buildProject, time: process.hrtime(startTime) });
+        const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash && !!compareRemoteHashes, this.logAffected);
+        if (recoverResponse === 'Cache not found') {
+          await this.runTarget(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
+          break;
         }
-        if (output instanceof Error) {
-          // Error on executing shell command
-          throw output;
+        if (recoverResponse instanceof Error) {
+          throw recoverResponse;
         }
-        if (output && isOutputTxt(outputs)) {
-          Logger.log(2, this.outputColor, output.output);
-        }
-        this.built++;
-      } else if (outputs.length) {
-        for (const output of outputs) {
-          // const outputPath = path.join(ROOT_PATH, root, output);
-          Logger.log(3, this.outputColor, 'Recovering from cache', buildProject, 'with hash => ', hash);
-          const startTime = process.hrtime();
-          const recoverResponse = await this.anotherJob(hash, root, output, script, this.compareHash && !!compareRemoteHashes, this.logAffected);
-          if (recoverResponse instanceof Error) {
-            throw recoverResponse;
-          }
-          if (!recoverResponse) {
-            await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
-            this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime) });
-            this.built++;
-          } else {
-            this.fromCache++;
-            const recoveryTime = process.hrtime(startTime);
-            const delta = Number((recoveryTime[0] + recoveryTime[1] / 1e9).toFixed(3));
-            if (delta > 10) {
-              this.slowCacheRecoveries.push({ buildProject, time: recoveryTime });
-            }
+        if (!recoverResponse) {
+          await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
+          this.hashMismatchProjects.push({ buildProject, time: process.hrtime(startTime) });
+          this.built++;
+        } else {
+          this.fromCache++;
+          const recoveryTime = process.hrtime(startTime);
+          const delta = Number((recoveryTime[0] + recoveryTime[1] / 1e9).toFixed(3));
+          if (delta > 10) {
+            this.slowCacheRecoveries.push({ buildProject, time: recoveryTime });
           }
         }
       }
