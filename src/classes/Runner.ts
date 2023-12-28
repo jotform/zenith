@@ -32,6 +32,8 @@ export default class Runner {
 
   pipeIndex = 0;
 
+  coloredOutput = true;
+
   static workspace = new Map<string, Set<string>>();
 
   constructor(...args: readonly string[]) {
@@ -47,6 +49,7 @@ export default class Runner {
       .option('-sp, --skipPackageJson', 'default: false. If true, will check package.json files before checking the cache and will skip the project if the target script is not in it.')
       .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
       .option('-np, --noPipe', 'default: false. If true, will skip the pipe and execute the target.')
+      .option('-co, --coloredOutput <color>', 'default: true. If false, will disable colors in the console.', 'true')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -100,6 +103,7 @@ export default class Runner {
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
     this.pipe = options.noPipe ? [] : ConfigHelperInstance.pipe;
+    this.coloredOutput = options.coloredOutput === 'true';
 
     Logger.setLogLevel(Number(options.logLevel));
   }
@@ -141,7 +145,7 @@ export default class Runner {
       noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE'),
       ...config
     };
-    const Builder = new BuildHelper(command, config.worker || this.worker);
+    const Builder = new BuildHelper(command, config.worker || this.worker, this.coloredOutput);
     await Builder.init(buildConfig);
     if (Runner.workspace.size === 0) {
       Runner.workspace = deepCloneMap(Builder.getProjects());

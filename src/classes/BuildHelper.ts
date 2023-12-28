@@ -56,11 +56,11 @@ export default class BuildHelper extends WorkerHelper {
 
   outputColor = '';
 
-  constructor(command : string, worker : string) {
+  constructor(command : string, worker : string, color: boolean) {
     super(command, worker);
     this.command = command;
     this.cacher = CacherFactory.getCacher();
-    this.outputColor = `\x1b[3${Math.floor(Math.random() * 7) + 1}m`;
+    this.outputColor = color ? `\x1b[3${Math.floor(Math.random() * 6) + 1}m` : '';
   }
 
   async init({
