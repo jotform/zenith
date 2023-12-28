@@ -23,7 +23,25 @@ export interface BuildConfig {
   [key: string]: TargetObject;
 }
 
-export interface ZenithConfigType {
+export type PipeConfig = {
+  script: string,
+  config?: {
+    debug?: boolean;
+    compareWith?: string;
+    compareHash?: boolean;
+    logAffected?: boolean;
+    skipDependencies?: boolean;
+    debugLocation?: string;
+    skipPackageJson?: boolean;
+    noCache?: boolean;
+    worker?: string;
+  }
+}
+
+export type PipeConfigArray = Array<PipeConfig | Array<PipeConfig>>
+
+export type ZenithConfigType = {
+  pipe: PipeConfigArray,
   ignore: string[],
   appDirectories: string[]
   buildConfig: BuildConfig,

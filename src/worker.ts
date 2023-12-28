@@ -35,10 +35,11 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
   }
 };
 
-const anotherJob = async (hash: string, root: string, output: string, target: string, compareHash: boolean, logAffected: boolean): Promise<boolean | Error> => {
+const anotherJob = async (hash: string, root: string, output: string, target: string, compareHash: boolean, logAffected: boolean): Promise<boolean | string | Error> => {
   try {
     const cacher = CacherFactory.getCacher();
     const outputHash = await cacher.recoverFromCache(hash, root, output, target, logAffected);
+    if (outputHash === 'Cache not found') return outputHash;
     // if the cacher is hybrid, then cache the output to the other cacher
     if (cacher.isHybrid()) {
       const hybridCacher = cacher as HybridCacher;

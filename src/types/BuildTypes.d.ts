@@ -12,6 +12,8 @@ export interface BuildParams {
   debugLocation: string;
   skipPackageJson: boolean;
   noCache: boolean;
+  project: string;
+  workspace: Map<string, Set<string>>;
 }
 
 export interface PackageJsonType {

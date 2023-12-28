@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Command, Option } from 'commander';
 import BuildHelper from './BuildHelper';
+import ConfigHelperInstance from './ConfigHelper';
 import Logger from '../utils/logger';
+import { deepCloneMap } from '../utils/functions';
 import { configManagerInstance } from '../config';
+import { PipeConfigArray } from '../types/ConfigTypes';
 
 export default class Runner {
   project = '';
@@ -25,10 +28,16 @@ export default class Runner {
 
   skipPackageJson = false;
 
+  pipe: PipeConfigArray = [];
+
+  pipeIndex = 0;
+
+  static workspace = new Map<string, Set<string>>();
+
   constructor(...args: readonly string[]) {
     const program = new Command();
     program
-      .option('-p, --project <project>', 'Project name')
+      .option('-p, --project <project>', 'Project name. If not specified, will run all projects.', 'all')
       .option('-t, --target <target>', 'Target name')
       .option('-d, --debug', 'Debug mode')
       .option('-c, --compareWith <compareWith>', 'Compare with')
@@ -37,6 +46,7 @@ export default class Runner {
       .option('-sd, --skipDependencies', 'default: false. If true, will skip dependencies and execute only the target.')
       .option('-sp, --skipPackageJson', 'default: false. If true, will check package.json files before checking the cache and will skip the project if the target script is not in it.')
       .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
+      .option('-np, --noPipe', 'default: false. If true, will skip the pipe and execute the target.')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -89,13 +99,38 @@ export default class Runner {
     }
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
+    this.pipe = options.noPipe ? [] : ConfigHelperInstance.pipe;
 
     Logger.setLogLevel(Number(options.logLevel));
   }
 
-  async run(): Promise<void> {
-    const Builder = new BuildHelper(this.command, this.worker);
-    await Builder.init({
+  async runWrapper(): Promise<void> {
+    if (this.pipe.length === 0) {
+      await this.run(this.command);
+      return;
+    }
+    await this.runPipe();
+  }
+
+  async runPipe(): Promise<void> {
+    const pipeTarget = this.pipe[this.pipeIndex];
+    if (Array.isArray(pipeTarget)) {
+      await Promise.all(pipeTarget.map(async (target) => {
+        await this.run(target.script, target.config);
+      }));
+    } else {
+      await this.run(pipeTarget.script, pipeTarget.config);
+    }
+    this.pipeIndex += 1;
+    if (this.pipeIndex < this.pipe.length) {
+      await this.runPipe();
+    }
+  }
+
+  async run(command: string, config: { worker?: string} = {}): Promise<void> {
+    const buildConfig = {
+      project: this.project,
+      workspace: Runner.workspace,
       debug: configManagerInstance.getConfigValue('ZENITH_DEBUG'),
       compareWith: this.compareWith,
       compareHash: this.compareHash,
@@ -103,14 +138,15 @@ export default class Runner {
       skipDependencies: this.skipDependencies,
       debugLocation: this.debugLocation,
       skipPackageJson: this.skipPackageJson,
-      noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE')
-    });
-    Logger.log(2, `Zenith ${this.command} started.`);
-    if (this.project === 'all') {
-      Builder.buildAll();
-    } else {
-      Builder.addProject(this.project);
+      noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE'),
+      ...config
+    };
+    const Builder = new BuildHelper(command, config.worker || this.worker);
+    await Builder.init(buildConfig);
+    if (Runner.workspace.size === 0) {
+      Runner.workspace = deepCloneMap(Builder.getProjects());
     }
-    Builder.build();
+    Logger.log(2, `Zenith ${command} started.`);
+    await Builder.build();
   }
 }

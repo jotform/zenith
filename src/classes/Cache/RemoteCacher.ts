@@ -55,22 +55,6 @@ class RemoteCacher extends Cacher {
     });
   }
 
-  listObjects({ Bucket, Prefix}: {Bucket?: string, Prefix: string}): Promise<string[]> {
-    return new Promise((resolve, reject) => {
-      this.s3Client.listObjectsV2({
-        Bucket: Bucket || configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-        Prefix
-      },
-      (err, data) => {
-        if (err) {
-          Logger.log(2, err);
-          reject(err);
-        }
-        resolve(data?.Contents?.map((content) => content.Key as string) || []);
-      });
-    });
-  }
-
   async getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>>{
     if (compareWith) {
       const debugFilePath = `${target}/${debugLocation}debug.${compareWith}.json`;

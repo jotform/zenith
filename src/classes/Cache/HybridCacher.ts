@@ -4,10 +4,12 @@ import LocalCacher from "./LocalCacher";
 import { Readable } from "stream";
 import { DebugJSON } from "../../types/ConfigTypes";
 import Logger from "../../utils/logger";
+import Hasher from "../Hasher";
 
 export default class HybridCacher implements Cacher {
     cachePath = '';
     cachers: Cacher[] = [];
+    hasher = new Hasher();
 
     constructor(type: 'local-first' | 'remote-first') {
         if (type === 'local-first') {
@@ -30,16 +32,6 @@ export default class HybridCacher implements Cacher {
             }
         }
         throw new Error(`Could not find ${Key} in cache`);
-    }
-
-    async listObjects({ Bucket, Prefix}: {Bucket?: string, Prefix: string}): Promise<string[]> {
-        for (const cacher of this.cachers) {
-            const objects = await cacher.listObjects({ Bucket, Prefix });
-            if (objects.length > 0) {
-                return objects;
-            }
-        }
-        return [];
     }
 
     isHybrid() {
@@ -104,12 +96,9 @@ export default class HybridCacher implements Cacher {
     async cacheToOther(hash: string, root: string, output: string, target: string, outputHash: string | boolean | void): Promise<void> {
         for (const cacher of this.cachers) {
             try {
-                const isCached = await cacher.isCached(hash, root, [output], target);
-                if (!isCached) {
                     // TODO: required file handling
                     await cacher.cache(hash, root, output, target, outputHash as string, []);
                     await cacher.sendOutputHash(hash, root, output, target);
-                }
             } catch (error) {
                 Logger.log(2, error);
             }
@@ -140,18 +129,6 @@ export default class HybridCacher implements Cacher {
             }
         }
         throw new Error(`Could not recover ${root} from cache`);
-    }
-
-    async isCached(hash: string, root: string, outputs: string[], target: string): Promise<boolean> {
-        for (const cacher of this.cachers) {
-            const isCached = await cacher.isCached(hash, root, outputs, target);
-            if (isCached) {
-                if (this.isDebug()) Logger.log(1, `isCached returning true for ${cacher.constructor.name} for ${root}`);
-                return true;
-            }
-        }
-        if (this.isDebug()) Logger.log(1, `isCached returned false for ${root}`);
-        return false;
     }
 
     async checkHashes(hash: string, root: string, output: string, target: string): Promise<Readable | undefined> {

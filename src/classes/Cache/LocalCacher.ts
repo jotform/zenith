@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, createWriteStream, readdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, createWriteStream } from 'fs';
 import * as path from 'path';
 import { ROOT_PATH } from '../../utils/constants';
 import Logger from '../../utils/logger';
@@ -7,9 +7,11 @@ import { NodeSystemError } from '../../types/BuildTypes';
 import { configManagerInstance } from '../../config';
 import Cacher from './Cacher';
 import { Readable } from 'stream';
+import Hasher from '../Hasher';
 
 class LocalCacher extends Cacher {
   cachePath = '';
+  hasher = new Hasher();
 
   constructor() {
     super();
@@ -56,28 +58,13 @@ class LocalCacher extends Cacher {
       catch (error) {
         const nodeError = error as NodeSystemError;
         if (nodeError.code === 'ENOENT') {
-          reject(false);
-          return;
-        }
-        Logger.log(2, error);
-        reject(error);
-      }
-    });
-  }
-
-  listObjects({ Prefix }: { Bucket?: string | undefined; Prefix: string; }): Promise<string[]> {
-    return new Promise((resolve, reject) => {
-      try {
-        const fullPath = path.join(this.cachePath, Prefix);
-        const files = readdirSync(fullPath);
-        const paths = files.map(file => path.join(Prefix, file));
-        if (this.isDebug()) Logger.log(1, 'Listed from cache => ', paths);
-        resolve(paths);
-      }
-      catch (error) {
-        const nodeError = error as NodeSystemError;
-        if (nodeError.code === 'ENOENT') {
-          resolve([]);
+          const metadata = {
+            code: 'NoSuchKey',
+            message: 'The specified key does not exist.',
+            key: Key,
+            httpStatusCode: 404
+          };
+          reject({ $metadata: metadata });
           return;
         }
         Logger.log(2, error);

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 class Logger {
   logLevel: number;
 
@@ -9,9 +10,8 @@ class Logger {
     this.logLevel = level;
   }
 
-  log(level: number, ...args: Array<unknown>) {
-    // eslint-disable-next-line no-console
-    if (this.logLevel >= level) console.log(...args);
+  log(level: number, color?: string | unknown, ...args: Array<unknown>) {
+    if (this.logLevel >= level && typeof color === 'string') console.log(`${color}${args.join(' ')}`, "\x1b[0m");
   }
 }
 
