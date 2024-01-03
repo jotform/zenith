@@ -16,14 +16,35 @@ class ConfigHelper {
 
   pipe: PipeConfigArray;
 
+  onFail?: (failedTarget: string, details: unknown) => void;
+
   constructor() {
     const configPath = process.env.ZENITH_CONFIG_PATH || 'zenith.json';
-    const config = JSON.parse(readFileSync(path.join(ROOT_PATH, configPath), { encoding: 'utf-8' })) as ZenithConfigType;
+    const config = this.parseConfig(path.join(ROOT_PATH, configPath));
     this.buildConfigJSON = config.buildConfig;
     this.pipe = config.pipe;
     this.projects = config.projects;
     this.ignoreFiles = this.getIgnoreFiles(config.ignore);
     this.appDirectories = config.appDirectories;
+    this.onFail = config.onFail;
+  }
+
+  parseConfig(configPath: string): ZenithConfigType {
+    if (!existsSync(configPath)) {
+      throw new Error('Zenith config file not found');
+    }
+    // check if config is json or js
+    const extension = path.extname(configPath);
+    if (extension === '.js') {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const config = (require(configPath)) as ZenithConfigType;
+      return config;
+    } 
+    if (extension === '.json') {
+      const config = readFileSync(configPath, { encoding: 'utf-8' });
+      return JSON.parse(config) as ZenithConfigType;
+    }
+    throw new Error('Zenith config file must be a json or js file');
   }
 
   getConfig(configName: string, root: string): TargetObject {
