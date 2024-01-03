@@ -29,7 +29,7 @@ export default class WorkerHelper {
       return execution;
 
     } catch (error) {
-      if (error instanceof Error) return error;
+      if (error instanceof Error) throw error;
       throw new Error('Executing worker failed');
     }
   }

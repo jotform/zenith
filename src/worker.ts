@@ -6,6 +6,7 @@ import Logger from './utils/logger';
 import { ROOT_PATH } from './utils/constants';
 import { readableToBuffer } from './utils/functions';
 import { configManagerInstance } from './config';
+import ConfigHelperInstance from './classes/ConfigHelper';
 import { ExecError } from './types/BuildTypes';
 import HybridCacher from './classes/Cache/HybridCacher';
 
@@ -25,10 +26,11 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     }
     return { output: commandOutput };
   } catch (error) {
+    if (ConfigHelperInstance.onFail) ConfigHelperInstance.onFail(root, error);
     if (error && typeof error === 'object' && 'stderr' in error) {
       const execErr = error as ExecError;
       Logger.log(2, 'ERR-W-E-1 :: output => ', execErr.stdout);
-      return execErr;
+      throw execErr;
     }
     Logger.log(2, 'ERR-W-E-3 :: output => ', error);
     return new Error(String(error));

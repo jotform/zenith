@@ -46,4 +46,5 @@ export type ZenithConfigType = {
   appDirectories: string[]
   buildConfig: BuildConfig,
   projects: ProjectConfig,
+  onFail?: (failedTarget: string, details: unknown) => void;
 }
