@@ -26,7 +26,7 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     }
     return { output: commandOutput };
   } catch (error) {
-    if (ConfigHelperInstance.onFail) ConfigHelperInstance.onFail(root, error);
+    if (ConfigHelperInstance.onFail) ConfigHelperInstance.onFail(targetCommand, { error, hash, root, outputs, projectName, requiredFiles });
     if (error && typeof error === 'object' && 'stderr' in error) {
       const execErr = error as ExecError;
       Logger.log(2, 'ERR-W-E-1 :: output => ', execErr.stdout);
