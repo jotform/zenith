@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Command, Option } from 'commander';
-import BuildHelper from './BuildHelper';
+import BuilderFactory from './Builder/BuilderFactory';
 import ConfigHelperInstance from './ConfigHelper';
 import Logger from '../utils/logger';
 import { deepCloneMap } from '../utils/functions';
@@ -27,6 +27,8 @@ export default class Runner {
   worker = '6';
 
   skipPackageJson = false;
+
+  singleCache = false;
 
   pipe: PipeConfigArray = [];
 
@@ -145,7 +147,8 @@ export default class Runner {
       noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE'),
       ...config
     };
-    const Builder = new BuildHelper(command, config.worker || this.worker, this.coloredOutput);
+    const buildType = this.singleCache ? 'single' : 'project';
+    const Builder = BuilderFactory.getBuilder(buildType, {command, worker: config.worker || this.worker, coloredOutput: this.coloredOutput});
     await Builder.init(buildConfig);
     if (Runner.workspace.size === 0) {
       Runner.workspace = deepCloneMap(Builder.getProjects());

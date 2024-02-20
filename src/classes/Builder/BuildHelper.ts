@@ -1,17 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { readFileSync } from 'fs';
 import * as path from 'path';
-import { ROOT_PATH } from '../utils/constants';
-import CacherFactory from './Cache/CacheFactory';
-import Hasher from './Hasher';
-import WorkerHelper from './WorkerHelper';
-import ConfigHelper from './ConfigHelper';
-import { deepCloneMap, formatMissingProjects, formatTimeDiff, isCommandDummy, isOutputTxt } from '../utils/functions';
-import Logger from '../utils/logger';
-import { ProjectStats, BuildParams, PackageJsonType } from '../types/BuildTypes';
-import LocalCacher from './Cache/LocalCacher';
-import RemoteCacher from './Cache/RemoteCacher';
-import { configManagerInstance } from '../config';
+import { ROOT_PATH } from '../../utils/constants';
+import CacherFactory from '../Cache/CacheFactory';
+import Hasher from '../Hasher';
+import WorkerHelper from '../WorkerHelper';
+import ConfigHelper from '../ConfigHelper';
+import { deepCloneMap, formatMissingProjects, formatTimeDiff, isCommandDummy, isOutputTxt } from '../../utils/functions';
+import Logger from '../../utils/logger';
+import { ProjectStats, BuildParams, PackageJsonType } from '../../types/BuildTypes';
+import LocalCacher from '../Cache/LocalCacher';
+import RemoteCacher from '../Cache/RemoteCacher';
+import { configManagerInstance } from '../../config';
 
 export default class BuildHelper extends WorkerHelper {
   projects : Map<string, Set<string>> = new Map();
@@ -40,6 +39,8 @@ export default class BuildHelper extends WorkerHelper {
 
   skipPackageJson = false;
 
+  singleCache = false;
+
   debugLocation = 'debug/';
 
   startTime: [number, number] = [0, 0];
@@ -64,13 +65,14 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async init({
-    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation, skipPackageJson, noCache, project, workspace
+    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation, skipPackageJson, singleCache, noCache, project, workspace
   }: BuildParams) : Promise<void> {
     this.compareHash = compareHash;
     this.logAffected = logAffected;
     this.skipDependencies = skipDependencies;
     this.debugLocation = debugLocation;
     this.skipPackageJson = skipPackageJson;
+    this.singleCache = singleCache;
     this.noCache = noCache;
     this.startTime = process.hrtime();
     this.projectToBuild = project || 'all';
@@ -79,6 +81,10 @@ export default class BuildHelper extends WorkerHelper {
     } else {
       if (this.projectToBuild === 'all') {
         this.buildAll();
+      } else if (this.projectToBuild.includes(',')) {
+        this.projectToBuild.split(',').forEach(project => {
+          this.addProject(project.trim());
+        });
       } else {
         this.addProject(this.projectToBuild);
       }
@@ -229,7 +235,6 @@ export default class BuildHelper extends WorkerHelper {
         await this.buildResolver(buildProject);
         return;
       }
-      // const isCached = await this.cacher.isCached(hash, root, outputs, script);
       if (this.compareWith) {
         const [changedFiles, newFiles] = this.hasher.getUpdatedHashes();
         if (changedFiles.length || newFiles.length) {
