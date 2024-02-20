@@ -11,6 +11,7 @@ export interface BuildParams {
   skipDependencies: boolean;
   debugLocation: string;
   skipPackageJson: boolean;
+  singleCache: boolean;
   noCache: boolean;
   project: string;
   workspace: Map<string, Set<string>>;

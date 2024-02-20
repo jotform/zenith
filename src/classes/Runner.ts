@@ -49,6 +49,7 @@ export default class Runner {
       .option('-la, --logAffected', 'default: false. If true, will log outputs of ONLY missed caches\' executes.')
       .option('-sd, --skipDependencies', 'default: false. If true, will skip dependencies and execute only the target.')
       .option('-sp, --skipPackageJson', 'default: false. If true, will check package.json files before checking the cache and will skip the project if the target script is not in it.')
+      .option('-sc, --singleCache', 'default: false. If true, will cache all projects together with their dependencies')
       .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
       .option('-np, --noPipe', 'default: false. If true, will skip the pipe and execute the target.')
       .option('-co, --coloredOutput <color>', 'default: true. If false, will disable colors in the console.', 'true')
@@ -96,6 +97,9 @@ export default class Runner {
     if (options.skipPackageJson) {
       this.skipPackageJson = true;
     }
+    if (options.singleCache) {
+      this.singleCache = true;
+    }
     if (options.noCache) {
       configManagerInstance.updateConfig({ 
         ZENITH_NO_CACHE: true,
@@ -114,8 +118,9 @@ export default class Runner {
     if (this.pipe.length === 0) {
       await this.run(this.command);
       return;
+    } else {
+      await this.runPipe();
     }
-    await this.runPipe();
   }
 
   async runPipe(): Promise<void> {
@@ -144,6 +149,7 @@ export default class Runner {
       skipDependencies: this.skipDependencies,
       debugLocation: this.debugLocation,
       skipPackageJson: this.skipPackageJson,
+      singleCache: this.singleCache,
       noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE'),
       ...config
     };

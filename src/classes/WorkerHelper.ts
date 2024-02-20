@@ -34,6 +34,20 @@ export default class WorkerHelper {
     }
   }
 
+  async executeManual({cwd, command, hash}: {cwd: string, command: string, hash: string}): Promise<{[output: string]: string } | Error> {
+    try {
+      const execution = await this.pool.exec('manual', [cwd, command, hash], {
+        on: message => Logger.log(3, message)
+      }) as {[output: string]: string} | Error;
+      if (execution instanceof Error) throw new Error('Executing worker failed');
+      return execution;
+
+    } catch (error) {
+      if (error instanceof Error) throw error;
+      throw new Error('Executing worker failed');
+    }
+  }
+
   async anotherJob(hash: string, root: string, output: string, target: string, compareHashes: boolean, logAffected: boolean): Promise<{output: string} | string | unknown> {
     try {
       return await this.pool.exec('anotherJob', [hash, root, output, target, compareHashes, logAffected], {

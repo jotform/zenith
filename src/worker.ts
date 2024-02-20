@@ -66,7 +66,29 @@ const anotherJob = async (hash: string, root: string, output: string, target: st
   }
 };
 
+const manual = async (cwd: string, command: string, hash: string) => {
+  try {
+    const cacher = CacherFactory.getCacher();
+    const output = execSync(`pnpm run ${command}`, { cwd, encoding: 'utf-8'});
+    await cacher.cache(hash, 'root', 'stdout', command, output, []);
+    await cacher.sendOutputHash(hash, 'root', output, command);
+    if (!configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) {
+      workerpool.workerEmit(`Files cached ${command}`);
+    }
+    return { output };
+  } catch (error) {
+    if (error && typeof error === 'object' && 'stderr' in error) {
+      const execErr = error as ExecError;
+      Logger.log(2, 'ERR-W-A :: output => ', execErr.stderr);
+      return execErr;
+    }
+    Logger.log(2, 'ERR-W-A :: output => ', error);
+    return new Error(String(error));
+  }
+};
+
 workerpool.worker({
   execute: execute,
-  anotherJob: anotherJob
+  anotherJob: anotherJob,
+  manual: manual
 });

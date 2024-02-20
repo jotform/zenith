@@ -98,6 +98,24 @@ export class Hasher {
     return hasher.digest('hex');
   }
 
+  getSingleHash({
+    script, debug, compareWith, projects
+  }: {
+    script: string,
+    projects: Map<string, Set<string>>,
+    debug?: boolean,
+    compareWith?: string,
+  }) {
+    const hasher = createHash('sha256');
+    Array.from(projects).forEach(([projectName]) => {
+      const projectRoot = ConfigHelperInstance.projects[projectName];
+      const buildPath = path.join(ROOT_PATH, projectRoot);
+      const projectHash = this.getHash(buildPath, script, debug, compareWith);
+      hasher.update(projectHash);
+    });
+    return hasher.digest('hex');
+  }
+
   getUpdatedHashes(): [Array<string>, Array<string>] {
     return [this.changedHash, this.newFiles];
   }
