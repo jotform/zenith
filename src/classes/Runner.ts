@@ -153,7 +153,7 @@ export default class Runner {
       noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE'),
       ...config
     };
-    const buildType = this.singleCache ? 'single' : 'project';
+    const buildType = buildConfig.singleCache ? 'single' : 'project';
     const Builder = BuilderFactory.getBuilder(buildType, {command, worker: config.worker || this.worker, coloredOutput: this.coloredOutput});
     await Builder.init(buildConfig);
     if (Runner.workspace.size === 0) {
