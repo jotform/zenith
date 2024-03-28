@@ -17,7 +17,7 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     const project = buildPath.split('/').pop();
     if (project === undefined) throw new Error('Could not read build path in execute method!');
     workerpool.workerEmit(`Running ${targetCommand} command for => ${project}`);
-    const commandOutput = execSync(`/bin/zenith_parallel_runner ${projectName} ${targetCommand} ${ROOT_PATH} ${process.env.GH_PR_ID}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
+    const commandOutput = execSync(`/bin/zenith_parallel_runner ${projectName} ${targetCommand} ${ROOT_PATH} ${process.env.GH_PR_ID || ''}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
     if (noCache) return { output: commandOutput };
     await Promise.all(outputs.map(output => cacher.cache(hash, root, output, targetCommand, commandOutput, requiredFiles)));
     await Promise.all(outputs.map(output => cacher.sendOutputHash(hash, root, output, targetCommand)));
