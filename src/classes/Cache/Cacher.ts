@@ -112,7 +112,7 @@ export default abstract class Cacher {
     if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
     try {
       const directoryPath = path.join(ROOT_PATH, root, output);
-      if ((output !== 'stdout' && !existsSync(directoryPath))) {
+      if (output !== 'stdout' && !existsSync(directoryPath)) {
         return;
       }
       const notFoundFiles = getMissingRequiredFiles(directoryPath, requiredFiles);
@@ -199,10 +199,8 @@ export default abstract class Cacher {
       if (nodeError.$metadata.httpStatusCode === 404) {
         return 'Cache not found';
       }
-      if (!error) {
-        return false;
-      }
-      Logger.log(2, 'error', );
+      Logger.log(2, "ERR-C-R ::", error);
+      throw error;
     }
   }
 

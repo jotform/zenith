@@ -49,12 +49,8 @@ export default class WorkerHelper {
   }
 
   async anotherJob(hash: string, root: string, output: string, target: string, compareHashes: boolean, logAffected: boolean): Promise<{output: string} | string | unknown> {
-    try {
-      return await this.pool.exec('anotherJob', [hash, root, output, target, compareHashes, logAffected], {
-        on: message => Logger.log(3, message)
+    return await this.pool.exec('anotherJob', [hash, root, output, target, compareHashes, logAffected], {
+      on: message => Logger.log(3, message)
       }) as boolean | Error;
-    } catch (error) {
-      return error;
-    }
   }
 }
