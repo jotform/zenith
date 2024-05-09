@@ -159,7 +159,7 @@ export default class Runner {
     if (Runner.workspace.size === 0) {
       Runner.workspace = deepCloneMap(Builder.getProjects());
     }
-    Logger.log(2, `Zenith ${command} started.`);
+    Logger.log(2, Builder.outputColor, `Zenith ${command} started.`);
     await Builder.build();
   }
 }
