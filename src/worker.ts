@@ -79,8 +79,8 @@ const manual = async (cwd: string, command: string, hash: string) => {
   } catch (error) {
     if (error && typeof error === 'object' && 'stderr' in error) {
       const execErr = error as ExecError;
-      Logger.log(2, 'ERR-W-A :: output => ', execErr.stderr);
-      return execErr;
+      Logger.log(2, 'ERR-W-A :: output => ', execErr.stdout);
+      throw execErr;
     }
     Logger.log(2, 'ERR-W-A :: output => ', error);
     return new Error(String(error));
