@@ -1,5 +1,6 @@
 import workerpool from 'workerpool';
-import { execSync } from 'child_process';
+import { Transform, PassThrough } from 'stream';
+import { execSync, spawn } from 'child_process';
 import CacherFactory from './classes/Cache/CacheFactory';
 import { Readable } from 'stream';
 import Logger from './utils/logger';
@@ -10,6 +11,46 @@ import ConfigHelperInstance from './classes/ConfigHelper';
 import { ExecError } from './types/BuildTypes';
 import HybridCacher from './classes/Cache/HybridCacher';
 
+const map = (mapf: (line: string) => string) => new Transform({
+  transform(chunk: string, _, callback) {
+    callback(null, mapf(chunk.toString()));
+  }
+});
+
+const formatText = (acc: string, prefix: string) => (line: string) => {
+  const timeFormat = new Date().toISOString();
+  const formattedPrefix = `(${prefix} - ${timeFormat})\n`;
+  const text = `${formattedPrefix}${line}`;
+  acc += text;
+  Logger.log(2, text);
+  return text;
+};
+
+const spawnJob = (command: string, projectName: string, _args: string[] = []) => {
+  return new Promise<string>((resolve, reject) => {
+    let stdoutString = '';
+    let stderrString = '';
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const spawnedProcess = spawn(command, [..._args], { cwd: ROOT_PATH, shell: true });
+    spawnedProcess.stdout.pipe(map(formatText(stdoutString, projectName))).pipe(stdout);
+    spawnedProcess.stderr.pipe(map(formatText(stderrString, projectName))).pipe(stderr);
+    spawnedProcess.on('close', (code: number) => {
+      if (code !== 0) {
+        reject(new Error(`Command ${command} exited with code: ${code}`));
+        return;
+      }
+
+      resolve(stdoutString);
+    });
+
+    spawnedProcess.on('error', (err: Error) => {
+      Logger.log(2, 'ERR-W-S-1 :: output => ', stderrString);
+      reject(new Error(`Command ${command} resulted in error: ${err.message}`));
+    });
+  });
+};
+
 const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache = false): Promise<{[output: string]: string} | Error> => {
   try {
     const cacher = CacherFactory.getCacher();
@@ -17,7 +58,10 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     const project = buildPath.split('/').pop();
     if (project === undefined) throw new Error('Could not read build path in execute method!');
     workerpool.workerEmit(`Running ${targetCommand} command for => ${project}`);
-    const commandOutput = execSync(`pnpm --filter ${projectName} ${targetCommand}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
+    const command = `pnpm --filter ${projectName} ${targetCommand}`;
+    // const commandOutput = execSync(command, { cwd: ROOT_PATH, encoding: 'utf-8' });
+    const commandOutput = await spawnJob(command, projectName);
+    console.log({ commandOutput });
     if (noCache) return { output: commandOutput };
     await Promise.all(outputs.map(output => cacher.cache(hash, root, output, targetCommand, commandOutput, requiredFiles)));
     await Promise.all(outputs.map(output => cacher.sendOutputHash(hash, root, output, targetCommand)));
