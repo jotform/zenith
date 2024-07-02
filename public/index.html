@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Zenith Graph</title>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="./graph.js"></script>
+    <script src="./filters.js"></script>
+    <script type="text/javascript">
+      function init() {
+        const data = initFilters({DATA})
+        console.log(data);
+        initGraph(data);
+        displayCurrentFilters();
+      }
+    </script>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body onload=init() style="background: white">
+    <div class="container">
+      <div class="sidebar">
+        <h2>Filters</h2>
+        <form id="filter-form">
+          <div class="filter">
+            <label for="workspace-filter">Filter Workspaces</label>
+            <input type="text" name="workspace-filter">
+          </div>
+          <div class="filter">
+            <label for="singular-filter">Filter Singular Packages</label>
+            <input type="checkbox" name="singular-filter">
+          </div>
+          <button type="submit">Apply Filters</button>
+        </form>
+        <div id="current-filters" style="margin-top: 20px;"></div>
+      </div>
+      <div class="main-content">
+        <h2>Graph</h2>
+        <div id="graphContainer">
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

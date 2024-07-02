@@ -19,7 +19,7 @@ class ConfigHelper {
   onFail?: (failedTarget: string, details: unknown) => void;
 
   constructor() {
-    const configPath = process.env.ZENITH_CONFIG_PATH || 'zenith.json';
+    const configPath = process.env.ZENITH_CONFIG_PATH || 'zenith.js';
     const config = this.parseConfig(path.join(ROOT_PATH, configPath));
     this.buildConfigJSON = config.buildConfig;
     this.pipe = config.pipe;
