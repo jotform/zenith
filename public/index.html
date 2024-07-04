@@ -10,13 +10,14 @@
       function init() {
         const data = initFilters({DATA})
         console.log(data);
-        initGraph(data);
+        const bClient = document.querySelector('.main-content').getBoundingClientRect();
+        initGraph(data, [bClient.width, bClient.height]);
         displayCurrentFilters();
       }
     </script>
     <link rel="stylesheet" href="./style.css">
   </head>
-  <body onload=init() style="background: white">
+  <body onload=init()>
     <div class="container">
       <div class="sidebar">
         <h2>Filters</h2>
@@ -34,7 +35,6 @@
         <div id="current-filters" style="margin-top: 20px;"></div>
       </div>
       <div class="main-content">
-        <h2>Graph</h2>
         <div id="graphContainer">
         </div>
       </div>

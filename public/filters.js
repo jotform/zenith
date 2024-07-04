@@ -48,6 +48,13 @@ function initFilters(data) {
   Object.entries(FILTERS).forEach(([name, {filterFN}]) => {
     const filterVal = params.get(name);
     if (!filterVal) return;
+    
+    const input = document.querySelector(`[name="${name}"`);
+    if (input.type === 'checkbox') {
+      input.checked = true;
+    } else {
+      input.value = filterVal;
+    }
     filteredData = filterFN(filteredData, filterVal);
   })
   return filteredData;

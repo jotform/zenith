@@ -1,7 +1,17 @@
+:root {
+  --bg: #85877C;
+  --bg-darker: #5E5F56;
+  --primary: #E2EF70;
+  --secondary: #C1EEFF;
+  --secondary-darker: #2B6CB0;
+  --dark: #342E37;
+}
+
 body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
+  background: var(--bg);
 }
 
 .container {
@@ -11,19 +21,26 @@ body {
 
 .sidebar {
   width: 250px;
-  background-color: #f4f4f4;
+  min-height: 97vh;
+  overflow-y: scroll;
+  background-color: var(--bg-darker);
   padding: 20px;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+
 }
 
 .sidebar h2 {
   margin-top: 0;
+  color: var(--primary);
 }
 
 .sidebar .filter {
   display: flex;
   flex-direction: column;
   margin-bottom: 15px;
+}
+
+.filter label {
+  color: var(--primary);
 }
 
 .main-content {
@@ -66,4 +83,29 @@ body {
 
 .filter-item button:hover {
   background-color: #c0392b;
+}
+
+.node .hovered {
+  fill: var(--secondary-darker);
+}
+
+.node .unhovered {
+  opacity: 0.5;
+}
+
+.node rect {
+  fill: var(--bg-darker);
+  transition: fill 0.25s linear
+}
+
+.node-link .unhovered {
+  stroke-opacity: 0.3;
+}
+
+.node-link .hovered {
+  stroke-opacity: 1;
+}
+
+.node .node-text {
+  font-weight: bold;
 }
