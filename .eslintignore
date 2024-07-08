@@ -1,6 +1,7 @@
 .eslintrc.js
 *.config.js
 *.spec.js
+zenith.js
 build
 public
 __mocks__
