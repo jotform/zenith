@@ -1,10 +1,24 @@
+@font-face {
+  font-family: 'Roboto';
+  src: url("./fonts/Roboto/Roboto-Regular.ttf");
+}
+
+* {
+  font-family: 'Roboto';
+}
+
 :root {
-  --bg: #85877C;
+  --bg: #152342;
   --bg-darker: #5E5F56;
   --primary: #E2EF70;
   --secondary: #C1EEFF;
   --secondary-darker: #2B6CB0;
+  --text: #a2abb7;
   --dark: #342E37;
+}
+
+::-webkit-scrollbar {
+  color: var(--bg-darker, #5E5F56);
 }
 
 body {
@@ -20,17 +34,20 @@ body {
 }
 
 .sidebar {
-  width: 250px;
   min-height: 97vh;
   overflow-y: scroll;
-  background-color: var(--bg-darker);
+  background-color: var(--bg);
   padding: 20px;
 
 }
 
 .sidebar h2 {
   margin-top: 0;
-  color: var(--primary);
+  color: var(--text);
+}
+
+.sidebar h3 {
+  color: var(--text);
 }
 
 .sidebar .filter {
@@ -40,7 +57,7 @@ body {
 }
 
 .filter label {
-  color: var(--primary);
+  color: var(--text);
 }
 
 .main-content {
@@ -90,7 +107,7 @@ body {
 }
 
 .node .unhovered {
-  opacity: 0.5;
+  opacity: 0.3;
 }
 
 .node rect {
@@ -104,6 +121,7 @@ body {
 
 .node-link .hovered {
   stroke-opacity: 1;
+  stroke-width: 5;
 }
 
 .node .node-text {

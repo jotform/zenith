@@ -4,3 +4,4 @@
 build
 public
 __mocks__
+src/commands/graph/server

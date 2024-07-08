@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import path from "path";
 
 const PUBLIC_PATH = path.normalize(`${__dirname}/../../../../public`)
+const PUBLIC_EXTENSIONS = ['.js', '.css', '.ttf'];
 const PORT = 8000;
 
 class Server {
@@ -26,7 +27,7 @@ class Server {
   createServer() {
     const server = createServer();
     server.on('request', async (request, response) => {
-      if (request.url.endsWith('.js') || request.url.endsWith('.css')) {
+      if (PUBLIC_EXTENSIONS.includes(path.extname(request.url))) {
         await this.serveStatic(request.url, response);
         return;
       }

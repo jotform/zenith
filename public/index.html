@@ -6,13 +6,28 @@
     <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
     <script src="./graph.js"></script>
     <script src="./filters.js"></script>
+    <script src="./svg-pan.min.js"></script>
     <script type="text/javascript">
-      function init() {
-        const data = initFilters({DATA})
-        console.log(data);
+      const originalData = {DATA};
+      function renderGraph(data) {
         const bClient = document.querySelector('.main-content').getBoundingClientRect();
         initGraph(data, [bClient.width, bClient.height]);
-        displayCurrentFilters();
+      }
+      function init() {
+        const data = initFilters(originalData);
+        renderGraph(data);
+        svgPanZoom('#graphContainer svg');
+        // displayCurrentFilters();
+      }
+
+      function showAllProjects() {
+        window.location.search = '';
+        renderGraph(originalData);
+        svgPanZoom('#graphContainer svg');
+      }
+
+      function hideAllProjects() {
+        renderGraph({nodes: [], links: []});
       }
     </script>
     <link rel="stylesheet" href="./style.css">
@@ -23,8 +38,12 @@
         <h2>Filters</h2>
         <form id="filter-form">
           <div class="filter">
-            <label for="workspace-filter">Filter Workspaces</label>
-            <input type="text" name="workspace-filter">
+            <label for="exclude-workspaces">Exclude Workspaces</label>
+            <input type="text" name="exclude-workspaces">
+          </div>
+          <div class="filter">
+            <label for="include-workspaces">Include Workspaces</label>
+            <input type="text" name="include-workspaces">
           </div>
           <div class="filter">
             <label for="singular-filter">Filter Singular Packages</label>
@@ -32,6 +51,12 @@
           </div>
           <button type="submit">Apply Filters</button>
         </form>
+        <button onclick="showAllProjects()">Show All Projects</button>
+        <button onclick="hideAllProjects()">Hide All Projects</button>
+        <div id="project-explorer">
+          <h3>Project Explorer</h3>
+          <!-- Add project explorer content here -->
+        </div>
         <div id="current-filters" style="margin-top: 20px;"></div>
       </div>
       <div class="main-content">

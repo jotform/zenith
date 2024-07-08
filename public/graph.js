@@ -1,10 +1,10 @@
-const markerBoxHeight = 10;
+const markerBoxHeight = 5;
 const markerBoxWidth = 10;
 const refX = markerBoxHeight / 2;
 const refY = markerBoxHeight / 2;
 const arrowPoints = [[0, 0], [0, markerBoxWidth], [markerBoxHeight, markerBoxWidth / 2]];
 const COLORS = {
-  BG: '#85877C',
+  BG: '#152342',
   PRIMARY: '#E2EF70',
   SECONDARY: '#C1EEFF',
   DARK: '#342E37'
@@ -23,7 +23,7 @@ const createArrowDef = svg => {
       .attr('orient', 'auto-start-reverse')
     .append('path')
       .attr('d', d3.line()(arrowPoints))
-      .attr('stroke', 'black');
+      .attr('fill', COLORS.SECONDARY);
 };
 
 const addDrag = (simulation, node) => {
@@ -55,13 +55,73 @@ const addDrag = (simulation, node) => {
   }
 }
 
-function initGraph(data, [w, h]) {
-  const width = w;
-  const height = h;
+const handleMouseEnter = (hoveredNode, links, node, link) => {
+  const targets = new Set();
+  links.forEach(d => {
+    if (d.source.id === hoveredNode.id || d.target.id === hoveredNode.id) {
+      targets.add(d.target.id);
+      targets.add(d.source.id);
+    }
+  })
+  
+  node.selectAll('rect')
+    .attr('class', d => {
+      if (targets.has(d.id)) return 'hovered';
+      return 'unhovered';
+    })
+
+  node.selectAll('text')
+    .attr('opacity', d => targets.has(d.id) ? 1 : 0.3);
+
+  link.attr('class',  d => (d.source.id === hoveredNode.id || d.target.id === hoveredNode.id) ? 'hovered' : 'unhovered');
+}
+
+const handleMouseLeave = (node, link) => {
+  node.selectAll('rect')
+    .attr('class', undefined);
+  node.selectAll('text')
+    .attr('opacity', 1)
+  link.attr('class', undefined)
+}
+
+const createSVG = (width, height) => {
+  return d3.create("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("viewBox", [0, 0, width, height])
+    .attr("style", `max-width: 100%; height: auto; background: ${COLORS.BG}`);
+}
+
+const createLinks = (svg, linkData) => {
+  return svg.append("g")
+    .attr("stroke", COLORS.SECONDARY)
+    .attr("stroke-opacity", 0.6)
+    .attr("class", "node-link")
+    .selectAll()
+    .data(linkData)
+    .join("line")
+      .attr("marker-mid", 'url(#arrow)');
+}
+
+const createNoNodeView = () => {
+  return createSVG(0, 0).node();
+}
+
+function initGraph(data, [width, height]) {
   console.log(data);
+  const existingSVG = graphContainer.querySelector('svg');
+  if (existingSVG) {
+    graphContainer.removeChild(existingSVG);
+  }
 
   const links = data.links.map(d => ({...d}));
   const nodes = data.nodes.map(d => ({...d}));
+
+  if (!nodes.length) {
+    const noNodes = createNoNodeView();
+    graphContainer.appendChild(noNodes);
+    return;
+  }
 
   const simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(links).id(d => d.id).distance(300))
@@ -70,26 +130,9 @@ function initGraph(data, [w, h]) {
       .force("y", d3.forceY().y(d => d.height * 300))
       .on("tick", ticked);
 
-  // Create the SVG container.
-  const svg = d3.create("svg")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("viewBox", [0, 0, width, height])
-      .call(d3.zoom().on('zoom', (event) => {
-        svg.attr('transform', event.transform);
-      }))
-      .attr("style", `max-width: 100%; height: auto; background: ${COLORS.BG}`);
-
+  const svg = createSVG(width, height)
   createArrowDef(svg);
-
-  const link = svg.append("g")
-    .attr("stroke", COLORS.SECONDARY)
-    .attr("stroke-opacity", 0.6)
-    .attr("class", "node-link")
-    .selectAll()
-    .data(links)
-    .join("line")
-      .attr("marker-end", 'url(#arrow)');
+  const SVGLinks = createLinks(svg, links);
 
   const nodeGroup = svg.append("g")
     .attr("stroke-width", 1.5);
@@ -98,38 +141,8 @@ function initGraph(data, [w, h]) {
     .data(nodes)
     .join('g')
     .attr('class', 'node')
-    .on('mouseenter', (_, hoveredNode) => {
-      nodes.forEach(n => {
-        if (n.id === hoveredNode.id) n.clicked = true;
-        else n.clicked = false
-      });
-
-      const targets = new Set();
-      links.forEach(d => {
-        console.log({d, hoveredNode})
-        if (d.source.id === hoveredNode.id || d.target.id === hoveredNode.id) {
-          targets.add(d.target.id);
-          targets.add(d.source.id);
-        }
-      })
-      
-      node.selectAll('rect')
-        .attr('class', d => {
-          console.log({d, targets})
-          if (d.clicked) return 'hovered';
-          if (targets.has(d.id)) return 'hovered';
-          return 'unhovered';
-        })
-
-      link.attr('class',  d => d.source.clicked || d.target.clicked ? 'hovered' : 'unhovered');
-      
-    })
-    .on('mouseleave', () => {
-      nodes.forEach(n => n.clicked = false);
-      node.selectAll('rect')
-        .attr('class', undefined);
-      link.attr('class', undefined)
-    })
+    .on('mouseenter', (_, hovered) => handleMouseEnter(hovered, links, node, SVGLinks))
+    .on('mouseleave', () => handleMouseLeave(node, SVGLinks))
 
   const rectHeight = 50;
   
@@ -163,12 +176,12 @@ function initGraph(data, [w, h]) {
       .attr("height", rectHeight)
       .attr("rx", 10)
       .attr("ry", 10)
-      .attr("style", `stroke:${COLORS.SECONDARY};stroke-width:1;`)
+      .attr("style", `stroke:${COLORS.PRIMARY};stroke-width:1;`)
       .lower();  // Move rectangles behind the text
 
   addDrag(simulation, node)
   function ticked() {
-    link
+    SVGLinks
         .attr("x1", d => d.source.x)
         .attr("y1", d => d.source.y)
         .attr("x2", d => {
