@@ -1,5 +1,5 @@
 {
-  "name": "@jotforminc/bin/setup.js",
+  "name": "@jotforminc/zenith",
   "packageManager": "yarn@1.22.21",
   "version": "2.5.0",
   "description": "",
@@ -9,7 +9,7 @@
     "README.md"
   ],
   "bin": {
-    "zenith": "./build/index.js"
+    "zenith": "./bin/setup.js"
   },
   "devDependencies": {
     "@aws-sdk/types": "3.310.0",
