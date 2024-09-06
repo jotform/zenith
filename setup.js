@@ -10,11 +10,11 @@ let userInput = require('readline').createInterface({
   output: process.stdout
 });
 
-let filePathArr = [];
-let fileNameArr = [];
-let ignoredDirArr = [];
-let ignoredAppArr = [];
-let packagesArr = [];
+const filePathArr = [];
+const fileNameArr = [];
+const ignoredDirArr = [];
+const ignoredAppArr = [];
+const packagesArr = [];
 
 let tempDirArr = [];
 let tempAppArr = [];
