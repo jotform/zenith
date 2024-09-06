@@ -168,11 +168,11 @@ function optionalDir() {//chooseDir içinde
 }//optionalDir
 
 function searchDir(dir, ignoredDirArr,ignoredAppArr) {//
-  let new_dir = fs.readdirSync(dir);//dir = current dir we are searching, newDir = result of the directories in "dir" in string array
+  const new_dir = fs.readdirSync(dir);//dir = current dir we are searching, newDir = result of the directories in "dir" in string array
   for (const item of new_dir) {
     try {
-      const newDirPath = path.join(dir, item);
-      let stats = fs.statSync(newDirPath);//newDirPath = current object (it can be dir or file)
+      let newDirPath = path.join(dir, item);
+      const stats = fs.statSync(newDirPath);//newDirPath = current object (it can be dir or file)
       if (stats.isDirectory() && !ignoredDirArr.includes(newDirPath) && !ignoredAppArr.includes(newDirPath))
         searchDir(newDirPath, ignoredDirArr,ignoredAppArr);
   
@@ -191,11 +191,11 @@ function searchDir(dir, ignoredDirArr,ignoredAppArr) {//
 }//searchDir(with arr)
 
 function searchFile(dir) { //searchDir içinde
-  let stats = fs.statSync(dir);
+  const stats = fs.statSync(dir);
   if (stats.isDirectory())
     return;
 
-  let readFile = fs.readFileSync(dir, "utf8");
+  const readFile = fs.readFileSync(dir, "utf8");
   const fileName = path.basename(dir);
 
   if (fileName === "package.json" && !filePathArr.includes(dir)) {
@@ -247,7 +247,6 @@ console.log("---------------Zenith Terminal---------------\nType (x) to exit the
 
 
 function writetoJSON(ignoredAppArr,ignoredDirArr,packagesArr){
-
   const data = {
     appDirectories: ignoredAppArr,
     packages: packagesArr,
