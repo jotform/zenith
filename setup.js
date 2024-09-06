@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { Readline } = require("readline/promises");
 
-let userInput = require('readline').createInterface({
+const userInput = require('readline').createInterface({
   input: process.stdin,
   output: process.stdout
 });
