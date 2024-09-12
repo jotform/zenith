@@ -1,74 +1,54 @@
 #!/usr/bin/node
 
-const { dir } = require("console");
+const { removeTypeDuplicates } = require("@babel/types");
+const { dir, error } = require("console");
 const fs = require("fs");
 const path = require("path");
 const { Readline } = require("readline/promises");
 
-const userInput = require('readline').createInterface({
+let userInput = require('readline').createInterface({
   input: process.stdin,
   output: process.stdout
 });
 
-const filePathArr = [];
-const fileNameArr = [];
-const ignoredDirArr = [];
-const ignoredAppArr = [];
-const packagesArr = [];
+let filePaths = [];
+let fileNames = [];
+let ignoredDirectories = [];
+let ignoredApps = [];
+let packages = [];
 
-let tempDirArr = [];
-let tempAppArr = [];
-let package_count = 0;
+let tempDirectories = [];
+let tempApps = [];
+let packageCount = 0;
 
+ignoredDirectories.push("node_modules");
+ignoredDirectories.push(".git");
 
-ignoredDirArr.push("node_modules");
-ignoredDirArr.push(".git");
-
-function takeAppDir() {
-  return new Promise((resolveAppDir, rejectAppDir) => {
-    console.log("App directories ? (x for quit adding new directories)");
-
-    const appCallback = (appEventListener) => {
-      if (appEventListener.length === 1 && appEventListener.toLowerCase().includes('x')) {
-        userInput.removeListener('line', appCallback);
-
-        userInput.question("\nAre you sure about all the directories? (y/n)", (appDirCheck) => {
-          if (appDirCheck.toLowerCase() === 'y') {
-            ignoredAppArr.push(...tempAppArr);
-            console.log("\nYour app directories\n------------------\n", ignoredAppArr);
-            writeAppDirJSON(ignoredAppArr);
-            resolveAppDir("Taking app directory is done.");
-            userInput.removeListener('line', appCallback);
-
-          } else if (appDirCheck.toLowerCase() === 'n') {
-            userInput.question("Do you want to quit adding app directories? (y for quitting)\n", (quitApp) => {
-              if (quitApp.toLowerCase() === 'y') {
-                tempAppArr = [];
-                resolveAppDir("Quitted adding app directories.");
-                userInput.removeListener('line', appCallback);
-              } else {
-                console.log("You have entered to continue.");
-                userInput.on('line', appCallback);
-              }
-            });
-          } else {
-            rejectAppDir("Invalid input provided.");
-          }
-        });
+const appDirectory = () => {
+  return new Promise((resolve) => {
+    console.log("Enter app directories (x to stop)");
+    const dirInput = (dirChoice) => {
+      if (dirChoice.toLowerCase() === 'x') {
+        console.log("Directory entry stopped.");
+        ignoredApps.push(...tempApps);
+        ignoredApps = removeDuplicate(ignoredApps);
+        console.log("\nYour app directories\n------------------\n", ignoredApps);
+        searchAppDirJSON(ignoredApps);
+        resolve("Taking app directory is done.");
+        userInput.removeListener('line',dirInput);
       } else {
         console.log("New app directory added.");
-        tempAppArr.push(appEventListener);
-        console.log("\nCurrent App Directories\n-----------------------------\n", tempAppArr);
+        tempApps.push(dirChoice);
+        console.log("\nCurrent App Directories\n-----------------------------\n", tempApps);
       }
     };
-    userInput.on('line', appCallback);
+    userInput.on('line', dirInput);
   });
-}
+};
 
-function writeAppDirJSON(appDir)
+function searchAppDirJSON(appDir)
 {
   const file = './packageInfo.json';
-
   let existingDataApp = {};
   if (fs.existsSync(file)) {
     const fileContent = fs.readFileSync(file, 'utf8');
@@ -76,138 +56,130 @@ function writeAppDirJSON(appDir)
       existingDataApp = JSON.parse(fileContent);
     }
   }
-
   existingDataApp.appDirectories = appDir;
-  ignoredAppArr = appDir;
-
+  ignoredApps = appDir;
 }
 
-
 function chooseDirectory() {
-  return new Promise ((resolveDir) => {
-    console.log("Do you want to ignore .github (x = no, y = yes)");
-    const takeGitCallback = (takeGitInput) => {
-      userInput.removeListener('line',takeGitCallback);
-      takeGitInput.toLowerCase();
-      console.log("Choice-->", takeGitInput);
-      if (takeGitInput === "x") {
+  return new Promise (async (resolve) => {
+    console.log("Do you want to ignore .gitignore (x = no, y = yes)");
+    const gitInput = async (gitChoice) => {
+      userInput.removeListener('line',gitInput);
+      gitChoice.toLowerCase();
+      console.log("Choice-->", gitChoice);
+      if (gitChoice === "x") {
         console.log("You have selected to \"not\" ignore the .github");
-        resolveDir("Github section closed.");
-      }
-      else if (takeGitInput === "y" || takeGitInput === "yes") {
-        ignoredDirArr.push(".github");
+        resolve();
+      } else if (gitChoice === "y" || gitChoice === "yes") {
+        await readGitignore();
         console.log("You have selected to ignore .github");
-        resolveDir("Github section closed.");
-      }
-      else
-      {
+        resolve();
+      } else {
         console.log("Wrong input detected, new one required.");
-        userInput.on('line',takeGitCallback);
+        userInput.on('line',gitInput);
       }
     };
-
-    userInput.on('line',takeGitCallback);
+    userInput.on('line',gitInput);
   });
 }
 
-function optionalDir() {
-  return new Promise ((resolveOptDir,rejectOptDir) => {
-    userInput.question("Is there any directories you want to ignore ? (Write \"yes\" to add new directories, else will quit adding new directories.)\nChoice:", userChoice => {
-      if (userChoice.toLowerCase() === "yes") {
-        const optDirCallback = (optDirUserInput) => {
-          if (optDirUserInput.length == 1 && optDirUserInput.toLowerCase().includes('x')) {
-            userInput.removeListener('line',optDirCallback);
-            console.log("-Current ignored directories-\n", ignoredDirArr, "\n----------------------------\n"
-                       ,"-Newly added directories-\n", tempDirArr);
-            userInput.question("Do you want to ignore these directories ? (Y/N):", (userChoice) => {
-              //----------------------------------------------------------------------------------------------------//
-              if (userChoice.length == 1 && userChoice.toLowerCase().includes('y')) {
-                ignoredDirArr.push(...tempDirArr);
-                resolveOptDir("Optional directories is done.Ignored directories\n---------------------------------\n", ignoredDirArr);
-                
-                searchDir('.',ignoredDirArr,ignoredAppArr);
-                
-              } else if (userChoice.length == 1 && userChoice.toLowerCase().includes('n')) {//user wants to enter more or quit to add extra directories
-                tempDirArr = [];
+function readGitignore () {
+  return new Promise (resolve => {
+    try {
+      const gitPackages = path.resolve('.gitignore');
+      fs.readFile(gitPackages, 'utf8', (err,data) => {
+      const newData = data 
+        .split('\n')
+        .map(data => data.trim())
+        .filter(data => data && !data.startsWith('#'));
 
-                userInput.question("Select more or quit ? (M/Q)", (userChoice) => {
-                  if (userChoice.length == 1 && userChoice.toLowerCase().includes('m')) {
-                    console.log("You have selected to continue.");
-                    userInput.on('line',optDirCallback);
-                  } else if (userChoice.length == 1 && userChoice.toLowerCase().includes('q')) {//quit optionalDir
-                    resolveOptDir("You have selected to quit adding more directories. Current directories to be ignored:", ignoredDirArr);
-
-                    searchDir('.',ignoredDirArr,ignoredAppArr);
-
-                  } else {
-                    rejectOptDir("Wrong input detected. Zenith will end now.");
-                    userInput.off('line',optDirCallback);
-                  }
-                });
-
-              }
-              else 
-                console.log("Wrong input detected.");
-            });
-          } else {
-            tempDirArr.push(optDirUserInput);
-            console.log("Current ignored directories:", tempDirArr)
-          }
-        }
-        userInput.on('line',optDirCallback);
-      }
-      else {
-        console.log("You have selected to quit adding more directories. Current directories to be ignored:", ignoredDirArr);
-        searchDir('.',ignoredDirArr,ignoredAppArr);
-      }
-    });
+      ignoredDirectories.push(...newData);
+      console.log("gitignore files have been added.",ignoredDirectories);
+      resolve();
+      });
+    } catch (error) {
+      console.log("Error occured when reading github",error)
+      
+      if (data == null)
+        console.log(".gitignore data is null ")
+    };
   })
+};
+
+function optionalDir() {
+  return new Promise (resolve => {
+    userInput.question("Is there any directories you want to ignore ? (Write \"y\" to add new directories, else will quit adding new directories.)\nChoice:", userChoice => {
+      console.log("Press \"n\" to quit")
+      if (userChoice.toLowerCase() === "y") {
+        const optInput = (optChoice) => {
+          if (optChoice.length == 1 && optChoice.toLowerCase().includes('n')) {
+            userInput.removeListener('line',optInput);
+            console.log("-Current ignored directories-\n", ignoredDirectories, "\n----------------------------\n"
+                       ,"-Newly added directories-\n", tempDirectories);
+            ignoredDirectories.push(...tempDirectories);
+            ignoredDirectories = removeDuplicate(ignoredDirectories);
+            console.log("Optional directories is done. Ignored directories\n---------------------------------\n", ignoredDirectories);
+            searchDirectory('.',ignoredDirectories,ignoredApps);
+            resolve();
+          } else {
+            tempDirectories.push(optChoice);
+            console.log("Current ignored directories:", tempDirectories)
+          }
+        }//optInput
+        userInput.on('line',optInput);
+      } else {
+        console.log("You have selected to quit adding more directories. Current directories to be ignored:", ignoredDirectories);
+        searchDirectory('.',ignoredDirectories,ignoredApps);
+      }
+    });//userQuestion
+  });
 }
 
-function searchDir(dir, ignoredDirArr,ignoredAppArr) {
+function searchDirectory(dir, ignoredDirArr,ignoredAppArr) {
+
+  if (dir == undefined)
+    return;
+
   const new_dir = fs.readdirSync(dir);
-  for (const item of new_dir) {
-    try {
-      let newDirPath = path.join(dir, item);
-      const stats = fs.statSync(newDirPath);
-      if (stats.isDirectory() && !ignoredDirArr.includes(newDirPath) && !ignoredAppArr.includes(newDirPath))
-        searchDir(newDirPath, ignoredDirArr,ignoredAppArr);
-  
-      else if (stats.isFile())
-        searchFile(newDirPath);
-  
-      else {
-        if (ignoredAppArr.includes(newDirPath) || ignoredDirArr.includes(newDirPath))
-          console.log("Unknown object type:" + path.basename(newDirPath));
-        continue;
+  return Promise.all(
+    new_dir.map(async (item) => {
+      try {
+        const newDirPath = path.join(dir, item);
+        const stats = fs.statSync(newDirPath);
+        if (stats.isDirectory() && !ignoredDirArr.includes(newDirPath) && !ignoredAppArr.includes(newDirPath)) {
+          return searchDirectory(newDirPath, ignoredDirArr, ignoredAppArr);
+        } else if (stats.isFile()) {
+          searchFile(newDirPath);
+        } else {
+          console.log("Unknown object type:", path.basename(newDirPath));
+        }
+      } catch (error) {
+        console.log("Error occurred when searching for directories:", error);
       }
-    } catch (error) {
-      console.log("Error occured when searchin for directories:",error);
-    }
-  }
+    })
+  );
 }
 
 function searchFile(dir) {
-  const stats = fs.statSync(dir);
+  let stats = fs.statSync(dir);
+  
   if (stats.isDirectory())
     return;
-
-  const readFile = fs.readFileSync(dir, "utf8");
+  
+  let readFile = fs.readFileSync(dir, "utf8");
   const fileName = path.basename(dir);
-
-  if (fileName === "package.json" && !filePathArr.includes(dir)) {
+  if (fileName === "package.json" && !filePaths.includes(dir)) {
     const usablefileName = JSON.parse(readFile);
-    package_count++;
-    filePathArr.push(dir);
-    fileNameArr.push(usablefileName.name);
-    console.log("Count:", package_count, "DIR:", dir);
-    writeFiletoJSON(filePathArr,fileNameArr);
+    packageCount++;
+    filePaths.push(dir);
+    fileNames.push(usablefileName.name);
+    console.log("Count:", packageCount, "DIR:", dir);
+    writeFiletoJSON(filePaths,fileNames);
   }
 }
 
 function writeFiletoJSON(filePathArr, fileNameArr) {
   const file = './packageInfo.json';
-
   let existingDataDir = {};
   if (fs.existsSync(file)) {
     const fileContent = fs.readFileSync(file, 'utf8');
@@ -215,26 +187,25 @@ function writeFiletoJSON(filePathArr, fileNameArr) {
       existingDataDir = JSON.parse(fileContent);
     }
   }
-
   const newData = filePathArr.reduce((acc, item, index) => {
     const dirName = path.dirname(item);
     const filePath = fileNameArr[index];
     acc[filePath] = dirName;
     return acc;
   }, {});
-
   existingDataDir.packages = newData;
-  packagesArr = newData;
-
+  packages = newData;
 }
 
 async function startZenith() {
 console.log("---------------Zenith Terminal---------------\nType (x) to exit the terminal.");
   try {
-      await takeAppDir();
+      await appDirectory();
       await chooseDirectory();
       await optionalDir();
-      writetoJSON(ignoredAppArr,ignoredDirArr,packagesArr);
+      await searchDirectory();
+      writetoJSON(ignoredApps,ignoredDirectories,packages);
+
       userInput.removeAllListeners('line');
   } catch (error) {
     console.log("Error!!!\n---------\n",error);
@@ -242,6 +213,15 @@ console.log("---------------Zenith Terminal---------------\nType (x) to exit the
   }
 }
 
+function removeDuplicate(arr)
+{
+  const tempArr = [];
+  arr.forEach(element => {
+    if (!tempArr.includes(element))
+      tempArr.push(element);
+  });
+  return tempArr;
+}
 
 function writetoJSON(ignoredAppArr,ignoredDirArr,packagesArr){
   const data = {
@@ -249,7 +229,6 @@ function writetoJSON(ignoredAppArr,ignoredDirArr,packagesArr){
     packages: packagesArr,
     ignore: ignoredDirArr
   };
-
 
   fs.writeFile('./packageInfo.json', JSON.stringify(data, null, 2), (err) => {
     if (err)
@@ -260,5 +239,3 @@ function writetoJSON(ignoredAppArr,ignoredDirArr,packagesArr){
 }
 
 startZenith();
-
-
