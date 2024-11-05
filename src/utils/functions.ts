@@ -1,5 +1,5 @@
 import { SAVE_AS_TXT_KEYWORD } from './constants';
-import { ProjectStats, PackageJsonType } from '../types/BuildTypes';
+import { ProjectStats, PackageJsonType, MissingProjectStats } from '../types/BuildTypes';
 import { existsSync, readdirSync, statSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { Readable } from 'stream';
@@ -8,14 +8,21 @@ export const formatTimeDiff = (time: [number, number]): string => {
   const seconds = (time[0] + time[1] / 1e9);
   if (seconds > 60) {
     const minutes = Math.floor(seconds / 60);
-    return `(${minutes}m ${(seconds % 60).toFixed(3)}s)`;
+    return `${minutes}m ${(seconds % 60).toFixed(3)}s`;
   }
-  return `(${seconds.toFixed(3)}s)`;
+  return `${seconds.toFixed(3)}s`;
 };
 
-export const formatMissingProjects = (missingProjects: Array<ProjectStats>): string => missingProjects.reduce((acc, curr) => {
-  return `${acc}\n${curr.buildProject} ${formatTimeDiff(curr.time)}`;
-}, '');
+export const formatMissingProjects = (missingProjects: Array<ProjectStats | MissingProjectStats>, name: string): Array<{[key: string]: string}> =>  missingProjects.map((project => {
+  if ('time' in project && project.time) {
+    return { [name]: project.buildProject, "Time": formatTimeDiff(project.time) };
+  }
+  if ('execTime' in project && project.execTime && project.cacheTime) {
+    const totalTime: [number, number] = [project.execTime[0] + project.cacheTime[0], project.execTime[1] + project.cacheTime[1]];
+    return { [name]: project.buildProject, 'Total Time': formatTimeDiff(totalTime), 'Execution Time': formatTimeDiff(project.execTime), 'Cache Time': formatTimeDiff(project.cacheTime)};
+  }
+  return { [name]: project.buildProject};
+}));
 
 // output is expected to be a string or array of strings
 export const isOutputTxt = (output: string | Array<string>): boolean => {

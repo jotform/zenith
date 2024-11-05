@@ -1,6 +1,12 @@
 export interface ProjectStats {
   buildProject: string;
-  time: [number, number];
+  time?: [number, number];
+}
+
+export interface MissingProjectStats {
+  buildProject: string;
+  execTime?: [number, number];
+  cacheTime?: [number, number]
 }
 
 export interface BuildParams {

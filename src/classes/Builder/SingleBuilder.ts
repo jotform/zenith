@@ -5,7 +5,7 @@ import { formatTimeDiff } from '../../utils/functions';
 export default class SingleBuilder extends BuildHelper {
 
   async fetchOrRun(hash: string) {
-    const recoverResponse = await this.anotherJob(hash, 'root', 'stdout', this.command, false, this.logAffected);
+    const {result: recoverResponse} = await this.anotherJob(hash, 'root', 'stdout', this.command, false, this.logAffected);
     if (recoverResponse === 'Cache not found') {
       Logger.log(2, 'Cache does not exist for command => ', this.command, hash);
       await this.runManual({cwd: './', command: this.command, hash});
@@ -36,7 +36,7 @@ export default class SingleBuilder extends BuildHelper {
         void this.pool.terminate();
         Logger.log(2, this.outputColor, `Zenith completed command: ${this.command}. ${this.noCache ? '(Cache was not used)' : ''}`);
         Logger.log(2, this.outputColor, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
-        Logger.log(2, this.outputColor, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
+        Logger.log(2, this.outputColor, `Total process took (${formatTimeDiff(process.hrtime(this.startTime))}).`);
         return;
       }
     }
