@@ -1,7 +1,7 @@
 {
   "name": "@jotforminc/zenith",
   "packageManager": "yarn@1.22.21",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "",
   "main": "./build/index.js",
   "files": [
@@ -41,6 +41,7 @@
     "commander": "10.0.1",
     "jszip": "3.10.1",
     "typescript": "^5.0.4",
+    "voici.js": "^2.1.0",
     "workerpool": "6.4.0"
   }
 }
