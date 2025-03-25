@@ -15,6 +15,7 @@ export interface BuildParams {
   compareHash: boolean;
   logAffected: boolean;
   skipDependencies: boolean;
+  onlyDependencies: boolean;
   debugLocation: string;
   skipPackageJson: boolean;
   singleCache: boolean;

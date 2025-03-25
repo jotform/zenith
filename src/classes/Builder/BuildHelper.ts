@@ -38,6 +38,8 @@ export default class BuildHelper extends WorkerHelper {
 
   skipDependencies = false;
 
+  onlyDependencies = false;
+
   skipPackageJson = false;
 
   singleCache = false;
@@ -66,11 +68,12 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async init({
-    debug, compareWith, compareHash, logAffected, skipDependencies, debugLocation, skipPackageJson, singleCache, noCache, project, workspace
+    debug, compareWith, compareHash, logAffected, skipDependencies, onlyDependencies, debugLocation, skipPackageJson, singleCache, noCache, project, workspace
   }: BuildParams) : Promise<void> {
     this.compareHash = compareHash;
     this.logAffected = logAffected;
     this.skipDependencies = skipDependencies;
+    this.onlyDependencies = onlyDependencies;
     this.debugLocation = debugLocation;
     this.skipPackageJson = skipPackageJson;
     this.singleCache = singleCache;
@@ -274,7 +277,18 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async build(): Promise<void> {
-    const projects = this.dependencyFreeProjects;
+    let projects = this.dependencyFreeProjects;
+    
+    if (this.onlyDependencies) {
+      // if onlyDependencies true, remove projectToBuild from projects.
+      if (this.projectToBuild.includes(',')) {
+        const projectsToFilter = this.projectToBuild.split(',').map(project => project.trim());
+        projects = projects.filter(p => !projectsToFilter.includes(p));
+      } else {
+        projects = projects.filter(p => p !== this.projectToBuild);
+      }
+    }
+    
     const stats = this.pool.stats();
     if (!projects.length) {
       if (!stats.pendingTasks && !stats.activeTasks) {

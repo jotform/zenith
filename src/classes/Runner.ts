@@ -22,6 +22,8 @@ export default class Runner {
 
   skipDependencies = false;
 
+  onlyDependencies = false;
+
   debugLocation = 'debug/';
 
   worker = '6';
@@ -48,6 +50,7 @@ export default class Runner {
       .option('-ch, --noCompareHash', 'default: false. If false, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.')
       .option('-la, --logAffected', 'default: false. If true, will log outputs of ONLY missed caches\' executes.')
       .option('-sd, --skipDependencies', 'default: false. If true, will skip dependencies and execute only the target.')
+      .option('-od, --onlyDependencies', 'default: false. If true, will skip build itself and execute only dependencies.')
       .option('-sp, --skipPackageJson', 'default: false. If true, will check package.json files before checking the cache and will skip the project if the target script is not in it.')
       .option('-sc, --singleCache', 'default: false. If true, will cache all projects together with their dependencies')
       .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
@@ -93,6 +96,9 @@ export default class Runner {
     }
     if (options.skipDependencies) {
       this.skipDependencies = true;
+    }
+    if (options.onlyDependencies) {
+      this.onlyDependencies = true;
     }
     if (options.skipPackageJson) {
       this.skipPackageJson = true;
@@ -147,6 +153,7 @@ export default class Runner {
       compareHash: this.compareHash,
       logAffected: this.logAffected,
       skipDependencies: this.skipDependencies,
+      onlyDependencies: this.onlyDependencies,
       debugLocation: this.debugLocation,
       skipPackageJson: this.skipPackageJson,
       singleCache: this.singleCache,
