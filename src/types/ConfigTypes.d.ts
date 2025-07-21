@@ -12,7 +12,8 @@ export interface TargetValue {
   input?: string,
   constantDependencies?: Array<string>,
   compareRemoteHashes?: boolean,
-  requiredFiles?: Array<string>
+  requiredFiles?: Array<string>,
+  additionalFiles?: Array<string>
 }
 
 export interface TargetObject {
