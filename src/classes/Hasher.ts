@@ -71,12 +71,8 @@ export class Hasher {
     const directory = readdirSync(directoryPath, { withFileTypes: true });
     if (directory.length === 0) return '';
     if (isFirst) {
-      if (constantDeps) {
-        debugger;
-        this.updateHashWithArray(hasher, constantDeps);
-      } else {
-        this.updateDependencyHash(hasher, directoryPath);
-      }
+      if (constantDeps) this.updateHashWithArray(hasher, constantDeps);
+      else this.updateDependencyHash(hasher, directoryPath);
     }
     directory.forEach(item => {
       if (this.excludeDirs.indexOf(item.name) !== -1) return;
