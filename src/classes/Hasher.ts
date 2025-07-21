@@ -52,22 +52,31 @@ export class Hasher {
     }
   }
 
-  getHash(directoryPath: string, script?: string, debug?: boolean, compareWith?: string, constantDeps?: Array<string>, isFirst = true): string {
+  getHash(directoryPath: string, script?: string, debug?: boolean, compareWith?: string, constantDeps?: Array<string>, additionalFiles: Array<string> = [], isFirst = true): string {
     const hasher = createHash('sha256');
     if (isFirst && script) {
       hasher.update(script);
-
-      const packageJSONPath = path.join(ROOT_PATH, 'package.json');
-      if (existsSync(packageJSONPath)) {
-        const rootPackageJSONString = readFileSync(packageJSONPath, { encoding: 'utf-8' });
-        hasher.update(rootPackageJSONString);
-      }
     }
+
+    if (isFirst && additionalFiles.length > 0) {
+      additionalFiles.forEach(filePath => {
+        const fullPath = path.join(ROOT_PATH, filePath);
+        if (existsSync(fullPath)) {
+          const fileContent = readFileSync(fullPath, { encoding: 'utf-8' });
+          hasher.update(fileContent);
+        }
+      });
+    }
+
     const directory = readdirSync(directoryPath, { withFileTypes: true });
     if (directory.length === 0) return '';
     if (isFirst) {
-      if (constantDeps) this.updateHashWithArray(hasher, constantDeps);
-      else this.updateDependencyHash(hasher, directoryPath);
+      if (constantDeps) {
+        debugger;
+        this.updateHashWithArray(hasher, constantDeps);
+      } else {
+        this.updateDependencyHash(hasher, directoryPath);
+      }
     }
     directory.forEach(item => {
       if (this.excludeDirs.indexOf(item.name) !== -1) return;
@@ -91,7 +100,7 @@ export class Hasher {
         }
         hasher.update(fileString);
       } else if (item.isDirectory() && !isEmpty(itemPath)) {
-        const dirHash = this.getHash(itemPath, script, debug, compareWith, constantDeps, false);
+        const dirHash = this.getHash(itemPath, script, debug, compareWith, constantDeps, [], false);
         if (dirHash) hasher.update(dirHash);
       }
     });
@@ -110,7 +119,7 @@ export class Hasher {
     Array.from(projects).forEach(([projectName]) => {
       const projectRoot = ConfigHelperInstance.projects[projectName];
       const buildPath = path.join(ROOT_PATH, projectRoot);
-      const projectHash = this.getHash(buildPath, script, debug, compareWith);
+      const projectHash = this.getHash(buildPath, script, debug, compareWith, undefined, []);
       hasher.update(projectHash);
     });
     return hasher.digest('hex');
