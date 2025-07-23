@@ -80,6 +80,12 @@ export default class BuildHelper extends WorkerHelper {
     this.noCache = noCache;
     this.startTime = process.hrtime();
     this.projectToBuild = project || 'all';
+    const constantDependencies = ConfigHelper.getConfig('mainConfig', '')[this.command]?.constantDependencies || [];
+    if (constantDependencies.length > 0) {
+      constantDependencies.forEach(dependency => {
+         this.addProject(dependency);
+      });
+    }
     if (workspace.size > 0) {
       this.projects = deepCloneMap(workspace);
     } else {
