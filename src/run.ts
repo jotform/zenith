@@ -1,16 +1,30 @@
 /* eslint-disable no-case-declarations */
-import Runner from './classes/Runner.js';
-import GraphRunner from './commands/graph/Runner.js';
 
 export const run = async () => {
   try {
     const args = process.argv;
     switch (args[2]) {
       case 'graph':
+        // Dynamic import to avoid ConfigHelper loading before zenith.json exists
+        const { default: GraphRunner } = await import('./commands/graph/Runner.js');
         const gRunner = new GraphRunner(...args);
         await gRunner.run();
         break;
-        default:
+      case 'init':
+        // Dynamic import to avoid ConfigHelper loading before zenith.json exists
+        const { default: InitRunner } = await import('./commands/init/InitRunner.js');
+        const initRunner = new InitRunner(...args);
+        await initRunner.run();
+        break;
+      case 'clean':
+        // Dynamic import to avoid ConfigHelper loading before zenith.json exists
+        const { default: CleanRunner } = await import('./commands/clean/CleanRunner.js');
+        const cleanRunner = new CleanRunner(...args);
+        await cleanRunner.run();
+        break;
+      default:
+        // Dynamic import to avoid ConfigHelper loading before zenith.json exists
+        const { default: Runner } = await import('./classes/Runner.js');
         const RunnerHelper = new Runner(...args);
         await RunnerHelper.runWrapper();
     }
