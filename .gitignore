@@ -3,3 +3,4 @@ bin
 build
 tests/mocks/*
 .vscode
+tsconfig.tsbuildinfo
