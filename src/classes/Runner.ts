@@ -6,6 +6,9 @@ import Logger from '../utils/logger';
 import { deepCloneMap } from '../utils/functions';
 import { configManagerInstance } from '../config';
 import { PipeConfigArray } from '../types/ConfigTypes';
+import { watch as chokidarWatch } from 'chokidar';
+import * as path from 'path';
+import { ROOT_PATH } from '../utils/constants';
 
 export default class Runner {
   project = '';
@@ -38,6 +41,8 @@ export default class Runner {
 
   coloredOutput = true;
 
+  watchMode = false;
+
   static workspace = new Map<string, Set<string>>();
 
   constructor(...args: readonly string[]) {
@@ -56,6 +61,7 @@ export default class Runner {
       .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
       .option('-np, --noPipe', 'default: false. If true, will skip the pipe and execute the target.')
       .option('-co, --coloredOutput <color>', 'default: true. If false, will disable colors in the console.', 'true')
+      .option('-w, --watch', 'default: false. If true, will watch for file changes and rebuild automatically.')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -112,6 +118,9 @@ export default class Runner {
         ZENITH_READ_ONLY: true
       });
     }
+    if (options.watch) {
+      this.watchMode = true;
+    }
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
     this.pipe = options.noPipe ? [] : ConfigHelperInstance.pipe;
@@ -121,6 +130,10 @@ export default class Runner {
   }
 
   async runWrapper(): Promise<void> {
+    if (this.watchMode) {
+      await this.runWatch();
+      return;
+    }
     if (this.pipe.length === 0) {
       await this.run(this.command);
       return;
@@ -168,5 +181,107 @@ export default class Runner {
     }
     Logger.log(2, Builder.outputColor, `Zenith ${command} started.`);
     await Builder.build();
+  }
+
+  async runWatch(): Promise<void> {
+    console.log('');
+    console.log('👁️  Watch mode enabled');
+    console.log('═══════════════════════════════════════');
+    console.log(`   Target: ${this.command}`);
+    console.log(`   Project filter: ${this.project}`);
+    console.log('');
+
+    // Get the list of projects to watch
+    const projectPaths: string[] = [];
+    const projects = ConfigHelperInstance.projects;
+    
+    for (const [projectName, projectPath] of Object.entries(projects)) {
+      if (this.project === 'all' || this.project === projectName) {
+        const fullPath = path.join(ROOT_PATH, projectPath);
+        projectPaths.push(fullPath);
+        console.log(`   Watching: ${projectPath}`);
+      }
+    }
+
+    if (projectPaths.length === 0) {
+      console.log('   ⚠️  No projects to watch');
+      return;
+    }
+
+    console.log('');
+    console.log('   Press Ctrl+C to stop watching.');
+    console.log('');
+
+    // Run initial build
+    console.log('🔨 Running initial build...');
+    console.log('');
+    await this.run(this.command);
+
+    // Set up file watcher
+    const ignorePatterns = ConfigHelperInstance.ignoreFiles || [];
+    const ignored = [
+      '**/node_modules/**',
+      '**/.git/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/.zenith-cache/**',
+      ...ignorePatterns.map(p => `**/${p}/**`)
+    ];
+
+    let isBuilding = false;
+    let pendingBuild = false;
+
+    const watcher = chokidarWatch(projectPaths, {
+      ignored,
+      persistent: true,
+      ignoreInitial: true,
+      awaitWriteFinish: {
+        stabilityThreshold: 100,
+        pollInterval: 100
+      }
+    });
+
+    const triggerBuild = async (filePath: string) => {
+      const relativePath = path.relative(ROOT_PATH, filePath);
+      
+      if (isBuilding) {
+        pendingBuild = true;
+        return;
+      }
+
+      isBuilding = true;
+      console.log('');
+      console.log(`📝 File changed: ${relativePath}`);
+      console.log('🔨 Rebuilding...');
+      console.log('');
+
+      try {
+        // Reset workspace to detect changes
+        Runner.workspace = new Map();
+        await this.run(this.command);
+        console.log('');
+        console.log('✅ Build completed. Watching for changes...');
+      } catch (error) {
+        console.error('');
+        console.error('❌ Build failed:', error instanceof Error ? error.message : error);
+        console.log('');
+        console.log('👁️  Watching for changes...');
+      }
+
+      isBuilding = false;
+
+      if (pendingBuild) {
+        pendingBuild = false;
+        await triggerBuild(filePath);
+      }
+    };
+
+    watcher
+      .on('change', triggerBuild)
+      .on('add', triggerBuild)
+      .on('unlink', triggerBuild);
+
+    // Keep the process running
+    await new Promise(() => {});
   }
 }
