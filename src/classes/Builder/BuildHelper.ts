@@ -12,6 +12,7 @@ import { ProjectStats, BuildParams, PackageJsonType, MissingProjectStats } from 
 import LocalCacher from '../Cache/LocalCacher';
 import RemoteCacher from '../Cache/RemoteCacher';
 import { configManagerInstance } from '../../config';
+import { getBuildProgressBar, clearBuildProgressBar } from '../../utils/progressBar';
 
 export default class BuildHelper extends WorkerHelper {
   projects : Map<string, Set<string>> = new Map();
@@ -54,6 +55,8 @@ export default class BuildHelper extends WorkerHelper {
 
   noCache = false;
 
+  progressBar = false;
+
   cacher: RemoteCacher | LocalCacher;
 
   hasher = new Hasher();
@@ -68,7 +71,7 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async init({
-    debug, compareWith, compareHash, logAffected, skipDependencies, onlyDependencies, debugLocation, skipPackageJson, singleCache, noCache, project, workspace
+    debug, compareWith, compareHash, logAffected, skipDependencies, onlyDependencies, debugLocation, skipPackageJson, singleCache, noCache, progressBar, project, workspace
   }: BuildParams) : Promise<void> {
     this.compareHash = compareHash;
     this.logAffected = logAffected;
@@ -78,6 +81,7 @@ export default class BuildHelper extends WorkerHelper {
     this.skipPackageJson = skipPackageJson;
     this.singleCache = singleCache;
     this.noCache = noCache;
+    this.progressBar = progressBar || false;
     this.startTime = process.hrtime();
     this.projectToBuild = project || 'all';
     const constantDependencies = ConfigHelper.getConfig('mainConfig', '')[this.command]?.constantDependencies || [];
@@ -208,6 +212,10 @@ export default class BuildHelper extends WorkerHelper {
 
   async buildResolver(project: string): Promise<void> {
     this.removeProject(project);
+    const progressBarInstance = getBuildProgressBar();
+    if (progressBarInstance && this.progressBar) {
+      progressBarInstance.increment();
+    }
     await this.build();
   }
 
@@ -301,6 +309,11 @@ export default class BuildHelper extends WorkerHelper {
     if (!projects.length) {
       if (!stats.pendingTasks && !stats.activeTasks) {
         void this.pool.terminate();
+        const progressBarInstance = getBuildProgressBar();
+        if (progressBarInstance && this.progressBar) {
+          progressBarInstance.stop();
+          clearBuildProgressBar();
+        }
         Logger.log(2, this.outputColor, `Zenith completed command: ${this.command}. ${this.noCache ? '(Cache was not used)' : ''}`);
         Logger.log(2, this.outputColor, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
         Logger.log(2, this.outputColor, `${this.fromCache} projects used from cache,`);

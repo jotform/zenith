@@ -20,6 +20,7 @@ export interface BuildParams {
   skipPackageJson: boolean;
   singleCache: boolean;
   noCache: boolean;
+  progressBar?: boolean;
   project: string;
   workspace: Map<string, Set<string>>;
 }

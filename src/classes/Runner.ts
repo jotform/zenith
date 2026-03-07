@@ -6,6 +6,7 @@ import Logger from '../utils/logger';
 import { deepCloneMap } from '../utils/functions';
 import { configManagerInstance } from '../config';
 import { PipeConfigArray } from '../types/ConfigTypes';
+import { createBuildProgressBar, clearBuildProgressBar } from '../utils/progressBar';
 
 export default class Runner {
   project = '';
@@ -38,6 +39,8 @@ export default class Runner {
 
   coloredOutput = true;
 
+  progressBar = false;
+
   static workspace = new Map<string, Set<string>>();
 
   constructor(...args: readonly string[]) {
@@ -56,6 +59,7 @@ export default class Runner {
       .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
       .option('-np, --noPipe', 'default: false. If true, will skip the pipe and execute the target.')
       .option('-co, --coloredOutput <color>', 'default: true. If false, will disable colors in the console.', 'true')
+      .option('-pb, --progressBar', 'default: false. If true, will show a progress bar during build.')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -112,6 +116,9 @@ export default class Runner {
         ZENITH_READ_ONLY: true
       });
     }
+    if (options.progressBar) {
+      this.progressBar = true;
+    }
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
     this.pipe = options.noPipe ? [] : ConfigHelperInstance.pipe;
@@ -158,6 +165,7 @@ export default class Runner {
       skipPackageJson: this.skipPackageJson,
       singleCache: this.singleCache,
       noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE'),
+      progressBar: this.progressBar,
       ...config
     };
     const buildType = buildConfig.singleCache ? 'single' : 'project';
@@ -166,7 +174,20 @@ export default class Runner {
     if (Runner.workspace.size === 0) {
       Runner.workspace = deepCloneMap(Builder.getProjects());
     }
+
+    // Create progress bar if enabled
+    if (this.progressBar) {
+      const totalProjects = Builder.getProjects().size;
+      const bar = createBuildProgressBar(totalProjects, `Zenith ${command}`);
+      bar.start();
+    }
+
     Logger.log(2, Builder.outputColor, `Zenith ${command} started.`);
     await Builder.build();
+
+    // Cleanup progress bar
+    if (this.progressBar) {
+      clearBuildProgressBar();
+    }
   }
 }
