@@ -21,6 +21,7 @@
     ".github",
     ".eslintrc.js",
     "tests/__mocks__",
-    "src/commands/graph/{ui,server}"
+    "src/commands/graph/{ui,server}",
+    "src/**/__tests__/**"
   ]
 }
