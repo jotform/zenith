@@ -38,6 +38,8 @@ export default class Runner {
 
   coloredOutput = true;
 
+  dryRun = false;
+
   static workspace = new Map<string, Set<string>>();
 
   constructor(...args: readonly string[]) {
@@ -56,6 +58,7 @@ export default class Runner {
       .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
       .option('-np, --noPipe', 'default: false. If true, will skip the pipe and execute the target.')
       .option('-co, --coloredOutput <color>', 'default: true. If false, will disable colors in the console.', 'true')
+      .option('-dr, --dryRun', 'default: false. If true, will show what would be built without actually executing builds.')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -112,6 +115,9 @@ export default class Runner {
         ZENITH_READ_ONLY: true
       });
     }
+    if (options.dryRun) {
+      this.dryRun = true;
+    }
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
     this.pipe = options.noPipe ? [] : ConfigHelperInstance.pipe;
@@ -158,6 +164,7 @@ export default class Runner {
       skipPackageJson: this.skipPackageJson,
       singleCache: this.singleCache,
       noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE'),
+      dryRun: this.dryRun,
       ...config
     };
     const buildType = buildConfig.singleCache ? 'single' : 'project';
@@ -166,7 +173,47 @@ export default class Runner {
     if (Runner.workspace.size === 0) {
       Runner.workspace = deepCloneMap(Builder.getProjects());
     }
+    
+    if (this.dryRun) {
+      this.printDryRunInfo(command, Builder.getProjects());
+      return;
+    }
+    
     Logger.log(2, Builder.outputColor, `Zenith ${command} started.`);
     await Builder.build();
+  }
+
+  private printDryRunInfo(command: string, projects: Map<string, Set<string>>): void {
+    console.log('');
+    console.log('🔍 [DRY RUN] Build Plan');
+    console.log('═══════════════════════════════════════');
+    console.log(`   Target: ${command}`);
+    console.log(`   Project filter: ${this.project}`);
+    console.log(`   Skip dependencies: ${this.skipDependencies}`);
+    console.log(`   Only dependencies: ${this.onlyDependencies}`);
+    console.log(`   Single cache: ${this.singleCache}`);
+    console.log('');
+    console.log('📦 Projects to be built:');
+    console.log('───────────────────────────────────────');
+    
+    const projectList = Array.from(projects.keys());
+    if (projectList.length === 0) {
+      console.log('   No projects matched the filter.');
+    } else {
+      for (const projectName of projectList) {
+        const deps = projects.get(projectName);
+        const depCount = deps ? deps.size : 0;
+        console.log(`   • ${projectName}`);
+        if (depCount > 0 && !this.skipDependencies) {
+          console.log(`     └─ Dependencies: ${Array.from(deps || []).join(', ')}`);
+        }
+      }
+    }
+    
+    console.log('');
+    console.log(`📊 Summary: ${projectList.length} project(s) would be built`);
+    console.log('');
+    console.log('💡 Remove --dry-run flag to execute the build.');
+    console.log('');
   }
 }
