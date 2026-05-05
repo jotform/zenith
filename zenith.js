@@ -1,4 +1,6 @@
 module.exports = {
+  "pipe": [],
+  "appDirectories": [],
   "ignore": [
     "node_modules",
     ".gitignore",
@@ -12,6 +14,15 @@ module.exports = {
   ],
   "buildConfig": {
     "cachePath": ".customCache",
+    "mainConfig": {
+      "build": {
+        "script": "build",
+        "input": "",
+        "outputs": [
+          "build"
+        ]
+      }
+    },
     "appConfig": {
       "build": {
         "script": "build",

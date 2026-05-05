@@ -22,7 +22,7 @@ export default class SingleBuilder extends BuildHelper {
   }
 
   async build(): Promise<void> {
-    const hash = this.hasher.getSingleHash({script: this.command, projects: this.projects});
+    const hash = await this.hasher.getSingleHash({ script: this.command, projects: this.projects });
     try {
       await this.fetchOrRun(hash);
     } catch (err) {

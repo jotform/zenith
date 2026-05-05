@@ -1,8 +1,17 @@
 import { SAVE_AS_TXT_KEYWORD } from './constants';
 import { ProjectStats, PackageJsonType, MissingProjectStats } from '../types/BuildTypes';
-import { existsSync, readdirSync, statSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
 import { join } from 'path';
 import { Readable } from 'stream';
+
+/** Zip streams (e.g. JSZip generateNodeStream) may not pass `instanceof Readable` in all runtimes. */
+export function isReadableStreamBody(body: string | Buffer | Readable | unknown): body is Readable {
+  if (body === null || typeof body !== 'object') return false;
+  if (Buffer.isBuffer(body)) return false;
+  if (typeof body === 'string') return false;
+  const maybe = body as NodeJS.ReadableStream;
+  return typeof maybe.pipe === 'function';
+}
 
 export const formatTimeDiff = (time: [number, number]): string => {
   const seconds = (time[0] + time[1] / 1e9);
@@ -30,25 +39,35 @@ export const isOutputTxt = (output: string | Array<string>): boolean => {
   return output.includes(SAVE_AS_TXT_KEYWORD);
 };
 
-const getAllFiles = (dirPath: string, arrayOfFiles: string[]) => {
-  const files = readdirSync(dirPath);
-
-  arrayOfFiles = arrayOfFiles || [];
-
-  files.forEach(function(file) {
-    if (statSync(dirPath + "/" + file).isDirectory()) {
-      arrayOfFiles = getAllFiles(dirPath + "/" + file, arrayOfFiles);
-    } else {
-      arrayOfFiles.push(join(__dirname, dirPath, "/", file));
+/**
+ * True when the directory tree rooted at `dirPath` contains no non-directory
+ * paths (same rule as the old recursive walker: anything that is not a
+ * directory counts as a "file"). Exits as soon as one such path is found
+ * instead of enumerating every file in the tree.
+ */
+export const isEmpty = (dirPath: string): boolean => {
+  const stack: string[] = [dirPath];
+  while (stack.length > 0) {
+    const current = stack.pop() as string;
+    let names: string[];
+    try {
+      names = readdirSync(current);
+    } catch {
+      return true;
     }
-  });
-
-  return arrayOfFiles;
-};
-
-export const isEmpty = (path: string): boolean => {
-  const arr: string[] = [];
-  return getAllFiles(path, arr).length === 0;
+    for (const name of names) {
+      const full = join(current, name);
+      let st;
+      try {
+        st = statSync(full);
+      } catch {
+        continue;
+      }
+      if (st.isDirectory()) stack.push(full);
+      else return false;
+    }
+  }
+  return true;
 };
 
 export const getMissingRequiredFiles = (path: string, requiredFiles: string[] | undefined): string[] => {

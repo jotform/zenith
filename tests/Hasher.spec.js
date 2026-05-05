@@ -1,10 +1,10 @@
 import * as path from "path";
 import {
-  writeFileSync, existsSync, mkdirSync, rmdirSync, rmSync
+  writeFileSync, existsSync, mkdirSync, rmSync
 } from "fs";
 import { Hasher } from "../src/classes/Hasher";
-import { 
-  generateFileTree, hashData, walkFileTree, randomPick, updateFileContents 
+import {
+  generateFileTree, hashData, walkFileTree, randomPick, updateFileContents
 } from "./utils";
 
 
@@ -14,7 +14,7 @@ describe("hasher basic functionality", () => {
   let HasherInstance = null;
   const cleanUpHasher = () => {
     if (existsSync(mocksFolderPath)) {
-      rmdirSync(mocksFolderPath, { recursive: true, force: true });
+      rmSync(mocksFolderPath, { recursive: true, force: true });
     }
 
     mkdirSync(mocksFolderPath);
@@ -26,23 +26,23 @@ describe("hasher basic functionality", () => {
 
   afterAll(() => {
     if (existsSync(mocksFolderPath)) {
-      rmdirSync(mocksFolderPath, { recursive: true, force: true });
+      rmSync(mocksFolderPath, { recursive: true, force: true });
     }
   });
 
-  it("should get hash of directory", () => {
-    const hash = HasherInstance.getHash(mocksFolderPath, "", true, true);
+  it("should get hash of directory", async () => {
+    const hash = await HasherInstance.getHash(mocksFolderPath, "", true, true);
     expect(hash).toBeDefined();
   });
 
-  it("should not have changed or new files", () => {
-    const hash = HasherInstance.getHash(mocksFolderPath, "", true, true);
+  it("should not have changed or new files", async () => {
+    await HasherInstance.getHash(mocksFolderPath, "", true, true);
     const [changedFiles, newFiles] = HasherInstance.getUpdatedHashes();
     expect(changedFiles).toHaveLength(0);
     expect(newFiles).toHaveLength(0);
   });
 
-  it("should have only changed files", () => {
+  it("should have only changed files", async () => {
     // create original
     const mockFilePath = path.join(mocksFolderPath, "mockFile.js");
     const mockFileData = "// Test Mock File";
@@ -56,7 +56,7 @@ describe("hasher basic functionality", () => {
     const newMockFile = mockFileData + "\n // test comment";
     writeFileSync(mockFilePath, newMockFile);
     // get updated hash of mock file
-    const hash = HasherInstance.getHash(mocksFolderPath, "", true, true);
+    await HasherInstance.getHash(mocksFolderPath, "", true, true);
     const [changedFiles, newFiles] = HasherInstance.getUpdatedHashes();
     expect(changedFiles).toHaveLength(1);
     expect(newFiles).toHaveLength(0);
@@ -69,19 +69,19 @@ describe("hasher basic functionality", () => {
     expect(newFilesAfterEmpty).toHaveLength(0);
   });
 
-  it("should have only new files", () => {
+  it("should have only new files", async () => {
     // create dummy new file
     const dummyMockFilePath = path.join(mocksFolderPath, "dummyMockFile.js");
     writeFileSync(dummyMockFilePath, '// Test Mock File');
     // get updated hash
-    HasherInstance.getHash(mocksFolderPath, "", true, true);
+    await HasherInstance.getHash(mocksFolderPath, "", true, true);
     const [changedFiles, newFiles] = HasherInstance.getUpdatedHashes();
     expect(changedFiles).toHaveLength(0);
     expect(newFiles).toHaveLength(1);
   });
 
 
-  it("should create and operate on a random file tree with random changes and deletions", () => {
+  it("should create and operate on a random file tree with random changes and deletions", async () => {
     // Depth is the level of nesting inside the file tree
     const depth = 5;
     // Fanout is the number of elements at each level
@@ -99,7 +99,7 @@ describe("hasher basic functionality", () => {
     expect(allFiles).toHaveLength(numberOfFiles);
 
     // Get the hash of the file tree
-    HasherInstance.getHash(mocksFolderPath, "", true, true);
+    await HasherInstance.getHash(mocksFolderPath, "", true, true);
     const [changedFiles, newFiles] = HasherInstance.getUpdatedHashes();
     expect(changedFiles).toHaveLength(0);
     expect(newFiles).toHaveLength(numberOfFiles);
@@ -115,7 +115,7 @@ describe("hasher basic functionality", () => {
 
     // Get the updated hash of the file tree
     HasherInstance.emptyUpdatedHashes();
-    HasherInstance.getHash(mocksFolderPath, "", true, true);
+    await HasherInstance.getHash(mocksFolderPath, "", true, true);
     const [changedFilesAfterChange, newFilesAfterChange] = HasherInstance.getUpdatedHashes();
     expect(changedFilesAfterChange).toHaveLength(numberOfFilesToChange);
     expect(newFilesAfterChange).toHaveLength(0);
@@ -131,9 +131,16 @@ describe("hasher basic functionality", () => {
 
     // Get the updated hash of the file tree
     HasherInstance.emptyUpdatedHashes();
-    HasherInstance.getHash(mocksFolderPath, "", true, true);
+    await HasherInstance.getHash(mocksFolderPath, "", true, true);
     const [changedFilesAfterDelete, newFilesAfterDelete] = HasherInstance.getUpdatedHashes();
     expect(changedFilesAfterDelete).toHaveLength(0);
     expect(newFilesAfterDelete).toHaveLength(0);
+  });
+
+  it("hashes a tree containing a file above the stream threshold", async () => {
+    const bigPath = path.join(mocksFolderPath, "large.bin");
+    writeFileSync(bigPath, Buffer.alloc(256 * 1024 + 1, 3));
+    const hash = await HasherInstance.getHash(mocksFolderPath, "", false, undefined, undefined, []);
+    expect(hash).toMatch(/^[a-f0-9]{64}$/);
   });
 });

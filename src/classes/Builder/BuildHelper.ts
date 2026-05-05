@@ -226,7 +226,7 @@ export default class BuildHelper extends WorkerHelper {
       }
       const { outputs, script, constantDependencies, compareRemoteHashes, requiredFiles, additionalFiles } = config[this.command];
       const buildPath = path.join(ROOT_PATH, root);
-      const hash = this.hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies, additionalFiles || []);
+      const hash = await this.hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies, additionalFiles || []);
       this.hasher.hashJSON[buildProject] = hash;
 
       config[this.command].afterGetHashCallback?.(this, hash, buildProject);
