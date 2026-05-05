@@ -13,6 +13,8 @@ type ZenithConfig = {
   S3_SECRET_KEY: string,
   S3_BUCKET_NAME: string
   S3_ENDPOINT: string | undefined,
+  /** Path-style URLs (e.g. http://host:9000/bucket/key). Set for MinIO and most S3-compatible servers. */
+  S3_FORCE_PATH_STYLE: boolean,
   S3_REGION: string,
   ZENITH_DEBUG_ID: string,
   ZENITH_NO_CACHE: boolean,
@@ -41,6 +43,9 @@ class ConfigManager {
       S3_SECRET_KEY: process.env.S3_SECRET_KEY || 'my-secret-key',
       S3_BUCKET_NAME: process.env.S3_BUCKET_NAME || 'my-bucket',
       S3_ENDPOINT: process.env.S3_ENDPOINT,
+      S3_FORCE_PATH_STYLE: ['1', 'true', 'yes'].includes(
+        (process.env.S3_FORCE_PATH_STYLE || '').toLowerCase()
+      ),
       S3_REGION: process.env.S3_REGION || 'us-east-1',
       ZENITH_DEBUG_ID: process.env.ZENITH_DEBUG_ID || 'debug-log',
       ZENITH_NO_CACHE: Boolean(process.env.ZENITH_NO_CACHE) || false,

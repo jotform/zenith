@@ -1,12 +1,15 @@
 import { existsSync, mkdirSync, readFileSync, createWriteStream } from 'fs';
 import * as path from 'path';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
+import * as fsp from 'fs/promises';
 import { ROOT_PATH } from '../../utils/constants';
 import Logger from '../../utils/logger';
 import { DebugJSON } from '../../types/ConfigTypes';
 import { NodeSystemError } from '../../types/BuildTypes';
 import { configManagerInstance } from '../../config';
+import { isReadableStreamBody } from '../../utils/functions';
 import Cacher from './Cacher';
-import { Readable } from 'stream';
 import Hasher from '../Hasher';
 
 class LocalCacher extends Cacher {
@@ -27,23 +30,18 @@ class LocalCacher extends Cacher {
     }
   }
 
-  putObject({ Key, Body }: { Bucket?: string | undefined; Key: string; Body: string | Buffer; }): Promise<void> {
-    return new Promise((resolve, reject) => {
-      try {
-        const fullPath = path.join(this.cachePath, Key);
-        const directoryPath = path.dirname(fullPath);
-        if (!existsSync(directoryPath)) mkdirSync(directoryPath, { recursive: true });
-        const writer = createWriteStream(fullPath);
-        writer.write(Body);
-        writer.end();
-        if (this.isDebug()) Logger.log(1, 'Cached Locally => ', fullPath);
-        resolve();
+  putObject({ Key, Body }: { Bucket?: string | undefined; Key: string; Body: string | Buffer | Readable; }): Promise<void> {
+    return (async () => {
+      const fullPath = path.join(this.cachePath, Key);
+      const directoryPath = path.dirname(fullPath);
+      if (!existsSync(directoryPath)) mkdirSync(directoryPath, { recursive: true });
+      if (isReadableStreamBody(Body)) {
+        await pipeline(Body, createWriteStream(fullPath));
+      } else {
+        await fsp.writeFile(fullPath, Body);
       }
-      catch (error) {
-        Logger.log(2, error);
-        reject(error);
-      }
-    });
+      if (this.isDebug()) Logger.log(1, 'Cached Locally => ', fullPath);
+    })();
   }
 
   getObject({ Key }: { Bucket?: string | undefined; Key: string; }): Promise<Readable> {

@@ -1,8 +1,15 @@
+import { createReadStream, createWriteStream } from 'fs';
+import { unlink } from 'fs/promises';
+import { randomBytes } from 'crypto';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { pipeline } from 'stream/promises';
 import Cacher from "./Cacher";
 import RemoteCacher from "./RemoteCacher";
 import LocalCacher from "./LocalCacher";
 import { Readable } from "stream";
 import { DebugJSON } from "../../types/ConfigTypes";
+import { isReadableStreamBody } from "../../utils/functions";
 import Logger from "../../utils/logger";
 import Hasher from "../Hasher";
 
@@ -20,7 +27,18 @@ export default class HybridCacher implements Cacher {
         }
     }
 
-    async putObject({ Bucket, Key, Body }: { Bucket?: string | undefined, Key: string; Body: string | Buffer }): Promise<void> {
+    async putObject({ Bucket, Key, Body }: { Bucket?: string | undefined, Key: string; Body: string | Buffer | Readable }): Promise<void> {
+        if (isReadableStreamBody(Body)) {
+            const tmp = join(tmpdir(), `zenith-hybrid-${randomBytes(16).toString('hex')}.zip`);
+            await pipeline(Body, createWriteStream(tmp));
+            try {
+                await this.cachers[0].putObject({ Bucket, Key, Body: createReadStream(tmp) });
+                await this.cachers[1].putObject({ Bucket, Key, Body: createReadStream(tmp) });
+            } finally {
+                await unlink(tmp).catch(() => undefined);
+            }
+            return;
+        }
         await Promise.all(this.cachers.map(cacher => cacher.putObject({ Bucket, Key, Body })));
     }
 

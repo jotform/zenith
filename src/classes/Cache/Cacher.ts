@@ -1,13 +1,20 @@
 import { DebugJSON } from '../../types/ConfigTypes';
 import Zipper from './../Zipper';
+import { createWriteStream } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { randomBytes } from 'crypto';
+import { pipeline } from 'stream/promises';
+import * as fsp from 'fs/promises';
 import { Readable } from 'stream';
+import extract from 'extract-zip';
 import Logger from '../../utils/logger';
 import { configManagerInstance } from '../../config';
 import path = require('path');
 import { ROOT_PATH } from '../../utils/constants';
 import { existsSync } from 'fs';
 import { stat, rm, mkdir } from 'fs/promises';
-import { getMissingRequiredFiles, isOutputTxt, readableToBuffer } from '../../utils/functions';
+import { getMissingRequiredFiles, isOutputTxt } from '../../utils/functions';
 import Hasher from './../Hasher';
 import { NodeSystemError } from '../../types/BuildTypes';
 
@@ -15,7 +22,7 @@ export default abstract class Cacher {
   cachePath = '';
   hasher = new Hasher();
 
-  abstract putObject({Bucket, Key, Body}: {Bucket?: string,Key: string, Body: Buffer | string}): Promise<void>
+  abstract putObject({Bucket, Key, Body}: {Bucket?: string, Key: string, Body: Buffer | string | Readable}): Promise<void>
   abstract getObject({Bucket, Key}: {Bucket?: string,Key: string}): Promise<Readable>
 
   isHybrid() {
@@ -49,48 +56,37 @@ export default abstract class Cacher {
   abstract updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string): void
   sendOutputHash(hash: string, root: string, output: string, target: string): Promise<void> | undefined {
     if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
-    return new Promise<void>((resolve, reject) => {
+    return (async () => {
       try {
         const cachePath = `${target}/${hash}/${root}`;
         const directoryPath = path.join(ROOT_PATH, root, !isOutputTxt(output) ? output : '');
         if (!existsSync(directoryPath)) {
-          resolve();
           return;
         }
-        const outputHash = this.hasher.getHash(directoryPath);
+        const outputHash = await this.hasher.getHash(directoryPath);
         const outputBuff = Buffer.from(outputHash);
-        this.putObject(
-          {
-            Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-            Key: `${cachePath}/${output}-hash.txt`,
-            Body: outputBuff
-          }).then(() => {
-            Logger.log(3, 'Hash successfully stored');
-            resolve();
-          }).catch((err) => {
-            Logger.log(2, err);
-            reject(err);
-          });
+        await this.putObject({
+          Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+          Key: `${cachePath}/${output}-hash.txt`,
+          Body: outputBuff,
+        });
+        Logger.log(3, 'Hash successfully stored');
       } catch (error) {
         Logger.log(2, error);
+        throw error;
       }
-    });
+    })();
   }
 
   async cacheZip(cachePath: string, output: string, directoryPath: string) {
     const zipped = await Zipper.zip(directoryPath);
     zipped.compress();
-    const buff = await zipped.memory();
-    if (buff instanceof Buffer) {
-      await this.putObject({
-        Key: `${cachePath}/${output}.zip`,
-        Body: buff
-      });
-      Logger.log(3, 'Zip Cache successfully stored');
-    } else {
-      Logger.log(2, 'Zip Cache failed to store');
-      throw new Error('Zip Cache failed to store');
-    }
+    const body = zipped.stream();
+    await this.putObject({
+      Key: `${cachePath}/${output}.zip`,
+      Body: body,
+    });
+    Logger.log(3, 'Zip Cache successfully stored');
   }
 
   cacheTxt(cachePath: string, output: string, commandOutput: string) {
@@ -140,15 +136,17 @@ export default abstract class Cacher {
   }
 
   async pipeEnd(stream: Readable, outputPath: string) {
+    const tmpRoot = await fsp.mkdtemp(join(tmpdir(), `zenith-unzip-${randomBytes(4).toString('hex')}-`));
+    const tmpZip = join(tmpRoot, 'artifact.zip');
     try {
-      const buff = await readableToBuffer(stream);
-      const unzipped = await Zipper.unzip(buff);
-      await unzipped.save(outputPath);
-      const hash = this.hasher.getHash(outputPath);
-      return hash;
+      await pipeline(stream, createWriteStream(tmpZip));
+      await extract(tmpZip, { dir: outputPath });
+      return await this.hasher.getHash(outputPath);
     } catch (error) {
       Logger.log(2, error);
       throw error;
+    } finally {
+      await fsp.rm(tmpRoot, { recursive: true, force: true });
     }
   }
 
@@ -195,8 +193,8 @@ export default abstract class Cacher {
       }
       return await this.pipeEnd(response, outputPath);
     } catch (error) {
-      const nodeError = error as { $metadata: { httpStatusCode: number } };
-      if (nodeError.$metadata.httpStatusCode === 404) {
+      const status = (error as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
+      if (status === 404) {
         return 'Cache not found';
       }
       Logger.log(2, "ERR-C-R ::", error);

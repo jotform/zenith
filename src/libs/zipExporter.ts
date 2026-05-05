@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Readable } from 'stream';
 import UnzippedReader from './UnzippedReader';
 import JSZip from '../types/JSZip';
 
@@ -105,6 +106,22 @@ class ZipExporter {
             return Buffer.from(buff);
         }
         return new UnzippedReader(this.content);
+    }
+
+    /**
+     * Incremental zip bytes for upload (avoids holding the full archive in one buffer).
+     * Must not be used when {@link ZipExporter.srcUnzipped} is true.
+     */
+    stream(): Readable {
+        if (this.srcUnzipped) {
+            throw new Error('Cannot stream zip from an unzipped bundle');
+        }
+        return this.content.generateNodeStream({
+            type: 'nodebuffer',
+            streamFiles: true,
+            compression: this.compressed ? 'DEFLATE' : undefined,
+            compressionOptions: this.compressed ? { level: 6 } : undefined,
+        }) as Readable;
     }
 
     async save(_path = './') {

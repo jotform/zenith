@@ -31,7 +31,9 @@
     "lint": "eslint src/",
     "build": "tsc --build",
     "test": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests",
-    "tsc:w": "tsc -w"
+    "tsc:w": "tsc -w",
+    "minio:up": "docker compose -f docker-compose.minio.yml up -d",
+    "minio:down": "docker compose -f docker-compose.minio.yml down"
   },
   "keywords": [],
   "author": "",
@@ -39,6 +41,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.420.0",
     "commander": "10.0.1",
+    "extract-zip": "2.0.1",
     "jszip": "3.10.1",
     "typescript": "^5.0.4",
     "voici.js": "^2.1.0",
