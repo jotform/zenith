@@ -1,0 +1,31 @@
+# Local S3-compatible API for Zenith remote cache (MinIO).
+# Usage: docker compose -f docker-compose.minio.yml up -d
+# Then set S3_ENDPOINT=http://127.0.0.1:9000 S3_FORCE_PATH_STYLE=1 and the keys below.
+
+services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    restart: on-failure
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
+      mc mb local/zenith-cache --ignore-existing;
+      exit 0;
+      "
+
+volumes:
+  minio-data:

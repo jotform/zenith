@@ -123,6 +123,27 @@ The project uses several required environment variables and params. Without them
 - S3_REGION (string): AWS S3 region to connect to.
 - ZENITH_DEBUG_ID (string): A string that will be used to determine the debug file name.
 ```
+Optional for remote cache when not using default AWS endpoints:
+```
+- S3_ENDPOINT (string): Custom S3 API base URL (e.g. MinIO, GCS interoperable S3). Omit for AWS.
+- S3_FORCE_PATH_STYLE (1 | true | yes): Use path-style URLs (`http://host/bucket/key`). Required for most MinIO setups with the AWS SDK.
+```
+
+### Local S3 with MinIO
+1. Start MinIO and create the `zenith-cache` bucket: `yarn minio:up` (or `docker compose -f docker-compose.minio.yml up -d`).
+2. Console UI: http://127.0.0.1:9001 (user `minioadmin`, password `minioadmin` — local dev only).
+3. Point Zenith at MinIO, for example:
+```
+export CACHE_TYPE=remote
+export S3_ENDPOINT=http://127.0.0.1:9000
+export S3_FORCE_PATH_STYLE=1
+export S3_ACCESS_KEY=minioadmin
+export S3_SECRET_KEY=minioadmin
+export S3_BUCKET_NAME=zenith-cache
+export S3_REGION=us-east-1
+```
+Stop MinIO: `yarn minio:down`.
+
 ### Params
 ```
 -t, --target <"build" | "test">: Target command to be used.
