@@ -40,9 +40,11 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "3.420.0",
+    "@aws-sdk/lib-storage": "3.420.0",
     "commander": "10.0.1",
     "extract-zip": "2.0.1",
     "jszip": "3.10.1",
+    "tar": "6.2.1",
     "typescript": "^5.0.4",
     "voici.js": "^2.1.0",
     "workerpool": "6.4.0"
