@@ -130,7 +130,8 @@ Optional for remote cache when not using default AWS endpoints:
 ```
 
 ### Local S3 with MinIO
-1. Start MinIO and create the `zenith-cache` bucket: `yarn minio:up` (or `docker compose -f docker-compose.minio.yml up -d`).
+1. Start MinIO and create the `zenith-cache` bucket: `yarn minio:up` (uses local `minio` binary and starts a server on `127.0.0.1:9000`).
+   - If you prefer Docker, use `docker compose -f docker-compose.minio.yml up -d`.
 2. Console UI: http://127.0.0.1:9001 (user `minioadmin`, password `minioadmin` — local dev only).
 3. Point Zenith at MinIO, for example:
 ```
@@ -143,6 +144,16 @@ export S3_BUCKET_NAME=zenith-cache
 export S3_REGION=us-east-1
 ```
 Stop MinIO: `yarn minio:down`.
+
+### Cache format benchmark (local MinIO)
+
+After `yarn build` and `yarn minio:up`, with remote S3 env vars set:
+
+`node scripts/benchmark-cache-formats.cjs`
+
+This prints cache/recover timings for `zip`, `files`, `tar`, `blobs`, and `auto` on synthetic trees (many small files, few large binaries, mixed content).
+
+**Note:** True incremental “delta” caching (upload only changes vs a prior snapshot) is not implemented; `blobs` deduplicates identical content within one manifest, and `auto` only chooses a storage shape.
 
 ### Params
 ```
@@ -174,6 +185,9 @@ The following parameters are not required to work, but can be used to modify the
 
 
 -la, --logAffected: default: false. If true, will log outputs of ONLY missed caches\' executes.
+
+
+--cache-format <zip | files | tar | blobs | auto>: Cache object layout for this run. Default is `zip` (see `--help`). Values: `zip` — single archive per output; `files` — one object per file plus manifest (many small files can be slow remotely); `tar` — single uncompressed tar per output; `blobs` — content-addressed `blobs/<sha256>` plus manifest; `auto` — heuristic choice among those. **Cache key layout:** The build/content hash is unchanged; directory outputs use `target/layoutHash/projectRoot/…` where `layoutHash` mixes that hash with the concrete format so e.g. zip and tar never share a prefix. Stdout caches use `target/contentHash/projectRoot/`. Older buckets without `layoutHash` still work via a legacy prefix. Pass this flag only when you want to override the default; omitting it keeps `zip`.
 ```
 
 
