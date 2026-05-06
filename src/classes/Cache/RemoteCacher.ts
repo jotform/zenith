@@ -1,4 +1,5 @@
 import { S3 } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 import { createReadStream, createWriteStream } from 'fs';
 import { stat, unlink } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -11,6 +12,8 @@ import { DebugJSON } from '../../types/ConfigTypes';
 import { configManagerInstance } from '../../config';
 import { isReadableStreamBody } from '../../utils/functions';
 import Cacher from './Cacher';
+
+const MULTIPART_THRESHOLD_BYTES = 8 * 1024 * 1024;
 
 class RemoteCacher extends Cacher {
   s3Client: S3 = undefined as unknown as S3;
@@ -36,17 +39,36 @@ class RemoteCacher extends Cacher {
     return (async () => {
       const buck = Bucket || configManagerInstance.getConfigValue('S3_BUCKET_NAME');
       if (isReadableStreamBody(Body)) {
-        const tmp = join(tmpdir(), `zenith-upload-${randomBytes(16).toString('hex')}.zip`);
+        const tmp = join(tmpdir(), `zenith-upload-${randomBytes(16).toString('hex')}.bin`);
         await pipeline(Body, createWriteStream(tmp));
         const st = await stat(tmp);
         const rs = createReadStream(tmp);
+        const partSize = Math.min(8 * 1024 * 1024, Math.max(MULTIPART_THRESHOLD_BYTES, 5 * 1024 * 1024));
         try {
-          await this.s3Client.putObject({
-            Bucket: buck,
-            Key,
-            Body: rs,
-            ContentLength: st.size,
-          });
+          // Multipart: do not pass ContentLength with a file stream — some S3-compatible
+          // servers (e.g. MinIO) may complete with "at least one part" errors. Require size
+          // strictly greater than one part so the uploader always emits multiple part requests
+          // when using multipart (more reliable across backends).
+          if (st.size > partSize) {
+            const upload = new Upload({
+              client: this.s3Client,
+              params: {
+                Bucket: buck,
+                Key,
+                Body: rs,
+              },
+              partSize,
+              queueSize: 4,
+            });
+            await upload.done();
+          } else {
+            await this.s3Client.putObject({
+              Bucket: buck,
+              Key,
+              Body: rs,
+              ContentLength: st.size,
+            });
+          }
         } finally {
           rs.destroy();
           await unlink(tmp).catch(() => undefined);
