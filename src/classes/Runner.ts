@@ -4,7 +4,7 @@ import BuilderFactory from './Builder/BuilderFactory';
 import ConfigHelperInstance from './ConfigHelper';
 import Logger from '../utils/logger';
 import { deepCloneMap } from '../utils/functions';
-import { configManagerInstance } from '../config';
+import { CACHE_FORMATS, configManagerInstance } from '../config';
 import { PipeConfigArray } from '../types/ConfigTypes';
 
 export default class Runner {
@@ -73,6 +73,14 @@ export default class Runner {
           '-w, --worker <worker>',
           'Worker Number (default = 6): sets the maximum number of workers that run concurrently.'
         ).default('6')
+      )
+      .addOption(
+        new Option(
+          '--cache-format <format>',
+          'Cache storage shape: zip | files | tar | blobs | auto. When passed on the CLI, overrides the default (zip) for this run.'
+        )
+          .choices(Object.values(CACHE_FORMATS) as string[])
+          .default(CACHE_FORMATS.ZIP)
       );
     program.parse(args);
     const options = program.opts();
@@ -111,6 +119,9 @@ export default class Runner {
         ZENITH_NO_CACHE: true,
         ZENITH_READ_ONLY: true
       });
+    }
+    if (program.getOptionValueSource('cacheFormat') === 'cli') {
+      configManagerInstance.updateConfig({ ZENITH_CACHE_FORMAT: options.cacheFormat as CACHE_FORMATS });
     }
     this.debugLocation = options.debugLocation;
     this.worker = options.worker;
