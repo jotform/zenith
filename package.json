@@ -32,8 +32,9 @@
     "build": "tsc --build",
     "test": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests",
     "tsc:w": "tsc -w",
-    "minio:up": "docker compose -f docker-compose.minio.yml up -d",
-    "minio:down": "docker compose -f docker-compose.minio.yml down"
+    "minio:up": "node scripts/minio-up.cjs",
+    "minio:down": "node scripts/minio-down.cjs",
+    "bench:cache-formats": "node scripts/benchmark-cache-formats.cjs"
   },
   "keywords": [],
   "author": "",
