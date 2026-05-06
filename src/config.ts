@@ -5,10 +5,19 @@ enum CACHE_TYPES {
   REMOTE_FIRST = 'remote-first'
 }
 
+export enum CACHE_FORMATS {
+  ZIP = 'zip',
+  FILES = 'files',
+  TAR = 'tar',
+  BLOBS = 'blobs',
+  AUTO = 'auto',
+}
+
 type ZenithConfig = {
   ZENITH_READ_ONLY: boolean,
   ZENITH_DEBUG: boolean,
   CACHE_TYPE: CACHE_TYPES,
+  ZENITH_CACHE_FORMAT: CACHE_FORMATS,
   S3_ACCESS_KEY: string,
   S3_SECRET_KEY: string,
   S3_BUCKET_NAME: string
@@ -39,6 +48,7 @@ class ConfigManager {
       ZENITH_READ_ONLY: Boolean(process.env.ZENITH_READ_ONLY) || false,
       ZENITH_DEBUG: Boolean(process.env.ZENITH_DEBUG) || false,
       CACHE_TYPE: Object.values(CACHE_TYPES).includes(cacheType) ? cacheType : CACHE_TYPES.LOCAL,
+      ZENITH_CACHE_FORMAT: CACHE_FORMATS.ZIP,
       S3_ACCESS_KEY: process.env.S3_ACCESS_KEY || 'my-access-key',
       S3_SECRET_KEY: process.env.S3_SECRET_KEY || 'my-secret-key',
       S3_BUCKET_NAME: process.env.S3_BUCKET_NAME || 'my-bucket',

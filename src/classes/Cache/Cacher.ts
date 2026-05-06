@@ -1,13 +1,5 @@
 import { DebugJSON } from '../../types/ConfigTypes';
-import Zipper from './../Zipper';
-import { createWriteStream } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { randomBytes } from 'crypto';
-import { pipeline } from 'stream/promises';
-import * as fsp from 'fs/promises';
 import { Readable } from 'stream';
-import extract from 'extract-zip';
 import Logger from '../../utils/logger';
 import { configManagerInstance } from '../../config';
 import path = require('path');
@@ -17,6 +9,46 @@ import { stat, rm, mkdir } from 'fs/promises';
 import { getMissingRequiredFiles, isOutputTxt } from '../../utils/functions';
 import Hasher from './../Hasher';
 import { NodeSystemError } from '../../types/BuildTypes';
+import FilesCacheFormat from './cacheFormats/filesFormat';
+import BlobsCacheFormat from './cacheFormats/blobsFormat';
+import TarCacheFormat from './cacheFormats/tarFormat';
+import type { ConcreteCacheFormat } from './cacheFormats/settings';
+import {
+  LEGACY_MULTI_FORMAT_PROBE_ORDER,
+  getFormatsToProbeForLayoutPath,
+  resolveEffectiveConcreteFormat,
+} from './cacheFormats/settings';
+import { deriveCacheLayoutHash } from './cacheFormats/cacheLayoutHash';
+import ZipCacheFormat from './cacheFormats/zipFormat';
+
+const getFormatContext = (cacher: Cacher) => ({
+  putObject: cacher.putObject.bind(cacher),
+  getObject: cacher.getObject.bind(cacher),
+  txtPipeEnd: cacher.txtPipeEnd.bind(cacher),
+  hasher: cacher.hasher,
+  getBucketName: () => configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+});
+
+const getZipFormat = (cacher: Cacher): ZipCacheFormat => new ZipCacheFormat(getFormatContext(cacher));
+
+const getFilesFormat = (cacher: Cacher): FilesCacheFormat => new FilesCacheFormat(getFormatContext(cacher));
+
+const getTarFormat = (cacher: Cacher): TarCacheFormat => new TarCacheFormat(getFormatContext(cacher));
+
+const getBlobsFormat = (cacher: Cacher): BlobsCacheFormat => new BlobsCacheFormat(getFormatContext(cacher));
+
+const getFormatByName = (cacher: Cacher, name: ConcreteCacheFormat) => {
+  switch (name) {
+    case 'files':
+      return getFilesFormat(cacher);
+    case 'tar':
+      return getTarFormat(cacher);
+    case 'blobs':
+      return getBlobsFormat(cacher);
+    default:
+      return getZipFormat(cacher);
+  }
+};
 
 export default abstract class Cacher {
   cachePath = '';
@@ -30,7 +62,7 @@ export default abstract class Cacher {
   }
 
   isDebug() {
-    return process.env.ZENITH_CACHE_DEBUG === 'true';
+    return configManagerInstance.getConfigValue('ZENITH_DEBUG');
   }
   
   callback({
@@ -54,20 +86,27 @@ export default abstract class Cacher {
 
   abstract getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>>
   abstract updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string): void
+
   sendOutputHash(hash: string, root: string, output: string, target: string): Promise<void> | undefined {
     if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
     return (async () => {
       try {
-        const cachePath = `${target}/${hash}/${root}`;
         const directoryPath = path.join(ROOT_PATH, root, !isOutputTxt(output) ? output : '');
         if (!existsSync(directoryPath)) {
           return;
+        }
+        let resolvedPath: string;
+        if (isOutputTxt(output)) {
+          resolvedPath = `${target}/${hash}/${root}`;
+        } else {
+          const fmt = await resolveEffectiveConcreteFormat(directoryPath);
+          resolvedPath = `${target}/${deriveCacheLayoutHash(hash, fmt)}/${root}`;
         }
         const outputHash = await this.hasher.getHash(directoryPath);
         const outputBuff = Buffer.from(outputHash);
         await this.putObject({
           Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-          Key: `${cachePath}/${output}-hash.txt`,
+          Key: `${resolvedPath}/${output}-hash.txt`,
           Body: outputBuff,
         });
         Logger.log(3, 'Hash successfully stored');
@@ -79,15 +118,13 @@ export default abstract class Cacher {
   }
 
   async cacheZip(cachePath: string, output: string, directoryPath: string) {
-    const zipped = await Zipper.zip(directoryPath);
-    zipped.compress();
-    const body = zipped.stream();
-    await this.putObject({
-      Key: `${cachePath}/${output}.zip`,
-      Body: body,
+    await getZipFormat(this).cacheDirectory({
+      cachePath,
+      output,
+      directoryPath,
     });
-    Logger.log(3, 'Zip Cache successfully stored');
   }
+
 
   cacheTxt(cachePath: string, output: string, commandOutput: string) {
     return new Promise<void>((resolve, reject) => {
@@ -118,15 +155,20 @@ export default abstract class Cacher {
         }, '');
         throw new Error(`Below required files are not found while building ${root}.\n${fileLog}`);
       }
-      const cachePath = `${target}/${hash}/${root}`;
-      if (this.isDebug()) Logger.log(1, `Caching output ${directoryPath} to ${cachePath}`);
-      switch (output) {
-        case 'stdout':
-          await this.cacheTxt(cachePath, output, commandOutput);
-          break;
-        default:
-          await this.cacheZip(cachePath, output, directoryPath);
+      if (output === 'stdout') {
+        const cachePath = `${target}/${hash}/${root}`;
+        if (this.isDebug()) Logger.log(1, `Caching output ${directoryPath} to ${cachePath}`);
+        await this.cacheTxt(cachePath, output, commandOutput);
+        return;
       }
+      const effectiveFormat = await resolveEffectiveConcreteFormat(directoryPath);
+      const cachePath = `${target}/${deriveCacheLayoutHash(hash, effectiveFormat)}/${root}`;
+      if (this.isDebug()) Logger.log(1, `Caching output ${directoryPath} to ${cachePath}`);
+      await getFormatByName(this, effectiveFormat).cacheDirectory({
+        cachePath,
+        output,
+        directoryPath,
+      });
     } catch (error) {
       Logger.log(2, error);
       if (error instanceof Error) throw error;
@@ -136,17 +178,11 @@ export default abstract class Cacher {
   }
 
   async pipeEnd(stream: Readable, outputPath: string) {
-    const tmpRoot = await fsp.mkdtemp(join(tmpdir(), `zenith-unzip-${randomBytes(4).toString('hex')}-`));
-    const tmpZip = join(tmpRoot, 'artifact.zip');
     try {
-      await pipeline(stream, createWriteStream(tmpZip));
-      await extract(tmpZip, { dir: outputPath });
-      return await this.hasher.getHash(outputPath);
+      return await getZipFormat(this).extractZipStreamToOutput(stream, outputPath);
     } catch (error) {
       Logger.log(2, error);
       throw error;
-    } finally {
-      await fsp.rm(tmpRoot, { recursive: true, force: true });
     }
   }
 
@@ -164,15 +200,16 @@ export default abstract class Cacher {
 
   async recoverFromCache(originalHash: string, root: string, output: string, target: string, logAffected: boolean): Promise<string | boolean | void> {
     const isStdOut = isOutputTxt(output);
-    const remotePath = `${target}/${originalHash}/${root}/${output}.${isStdOut ? 'txt' : 'zip'}`;
     try {
-      const response = await this.getObject({
-        Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-        Key: remotePath
-      });
       const outputPath = path.join(ROOT_PATH, root, output);
-      if (response === undefined) throw new Error('Error while recovering from cache: S3 Response Body is undefined');
       if (isStdOut) {
+        const cachePath = `${target}/${originalHash}/${root}`;
+        const remotePath = `${cachePath}/${output}.txt`;
+        const response = await this.getObject({
+          Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+          Key: remotePath
+        });
+        if (response === undefined) throw new Error('Error while recovering from cache: S3 Response Body is undefined');
         const stdout = await this.txtPipeEnd(response);
         if (!logAffected) Logger.log(2, stdout);
         return stdout;
@@ -191,7 +228,30 @@ export default abstract class Cacher {
         }
         await mkdir(outputPath);
       }
-      return await this.pipeEnd(response, outputPath);
+      for (const fmt of getFormatsToProbeForLayoutPath()) {
+        const layoutHash = deriveCacheLayoutHash(originalHash, fmt);
+        const cachePath = `${target}/${layoutHash}/${root}`;
+        const recoveredHash = await getFormatByName(this, fmt).recoverDirectory({
+          cachePath,
+          output,
+          outputPath,
+        });
+        if (recoveredHash !== 'Cache not found') {
+          return recoveredHash;
+        }
+      }
+      const legacyPath = `${target}/${originalHash}/${root}`;
+      for (const fmt of LEGACY_MULTI_FORMAT_PROBE_ORDER) {
+        const recoveredHash = await getFormatByName(this, fmt).recoverDirectory({
+          cachePath: legacyPath,
+          output,
+          outputPath,
+        });
+        if (recoveredHash !== 'Cache not found') {
+          return recoveredHash;
+        }
+      }
+      return 'Cache not found';
     } catch (error) {
       const status = (error as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
       if (status === 404) {
@@ -203,17 +263,44 @@ export default abstract class Cacher {
   }
 
   async checkHashes(hash: string, root: string, output: string, target: string): Promise<Readable | undefined> {
-    const remotePath = `${target}/${hash}/${root}/${output}-hash.txt`;
+    const bucket = configManagerInstance.getConfigValue('S3_BUCKET_NAME');
+    if (isOutputTxt(output)) {
+      try {
+        const response = await this.getObject({
+          Bucket: bucket,
+          Key: `${target}/${hash}/${root}/${output}-hash.txt`,
+        });
+        if (response === undefined) throw new Error('Error while checking hashes: S3 Response Body is undefined');
+        return response;
+      } catch (error) {
+        Logger.log(2, error);
+        return undefined;
+      }
+    }
+    for (const fmt of getFormatsToProbeForLayoutPath()) {
+      const layoutHash = deriveCacheLayoutHash(hash, fmt);
+      try {
+        const response = await this.getObject({
+          Bucket: bucket,
+          Key: `${target}/${layoutHash}/${root}/${output}-hash.txt`,
+        });
+        if (response === undefined) throw new Error('Error while checking hashes: S3 Response Body is undefined');
+        return response;
+      } catch (error) {
+        Logger.log(2, error);
+      }
+    }
     try {
       const response = await this.getObject({
-        Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-        Key: remotePath
+        Bucket: bucket,
+        Key: `${target}/${hash}/${root}/${output}-hash.txt`,
       });
       if (response === undefined) throw new Error('Error while checking hashes: S3 Response Body is undefined');
       return response;
     } catch (error) {
       Logger.log(2, error);
     }
+    return undefined;
   }
 
 }

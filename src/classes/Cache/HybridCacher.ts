@@ -7,6 +7,7 @@ import { pipeline } from 'stream/promises';
 import Cacher from "./Cacher";
 import RemoteCacher from "./RemoteCacher";
 import LocalCacher from "./LocalCacher";
+import { configManagerInstance } from "../../config";
 import { Readable } from "stream";
 import { DebugJSON } from "../../types/ConfigTypes";
 import { isReadableStreamBody } from "../../utils/functions";
@@ -57,7 +58,7 @@ export default class HybridCacher implements Cacher {
     }
 
     isDebug() {
-        return process.env.ZENITH_CACHE_DEBUG === 'true';
+        return configManagerInstance.getConfigValue('ZENITH_DEBUG');
     }
 
     async getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>> {
