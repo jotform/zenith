@@ -137,24 +137,49 @@ export default class BuildHelper extends WorkerHelper {
     }
   }
 
-  isCyclic(dependency: string, project: string, [...visited]: string[]): boolean {
-    if (dependency === project) return true;
-    if (visited.includes(dependency)) return false;
+  /**
+   * True if a directed path exists from `start` to `target` along workspace dependency edges.
+   * `memo` caches results for the current `target`; `visiting` is the DFS stack (cycles → false, not memoized).
+   */
+  private projectReachableFrom(
+    start: string,
+    target: string,
+    visiting: Set<string>,
+    memo: Map<string, boolean>,
+  ): boolean {
+    if (start === target) return true;
+    const memoized = memo.get(start);
+    if (memoized !== undefined) return memoized;
+    if (visiting.has(start)) return false;
 
-    const dependencySet = this.projects.get(dependency);
-    if (!dependencySet) return false;
+    const outs = this.projects.get(start);
+    if (!outs || outs.size === 0) {
+      memo.set(start, false);
+      return false;
+    }
 
-    visited.push(dependency);
-    const dependencyArray = Array.from(dependencySet);
-    return dependencyArray.some(n => this.isCyclic(n, project, visited));
+    visiting.add(start);
+    let reachable = false;
+    for (const next of outs) {
+      if (this.projectReachableFrom(next, target, visiting, memo)) {
+        reachable = true;
+        break;
+      }
+    }
+    visiting.delete(start);
+    memo.set(start, reachable);
+    return reachable;
   }
 
   controlCyclicDependencies() {
     this.projects.forEach((dependencies, project) => {
-      const dependencyArray = Array.from(dependencies);
-      dependencyArray.forEach(dep => {
-        if (this.isCyclic(dep, project, [])) throw new Error(`Cyclic dependency found between ${project} <=> ${dep}.`);
-      });
+      const memo = new Map<string, boolean>();
+      const visiting = new Set<string>();
+      for (const dep of dependencies) {
+        if (this.projectReachableFrom(dep, project, visiting, memo)) {
+          throw new Error(`Cyclic dependency found between ${project} <=> ${dep}.`);
+        }
+      }
     });
   }
 
@@ -163,6 +188,7 @@ export default class BuildHelper extends WorkerHelper {
     Object.keys(allProjects).forEach(project => {
       this.addProject(project);
     });
+
     this.controlCyclicDependencies();
   }
 
