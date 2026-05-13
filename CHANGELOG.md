@@ -10,6 +10,12 @@ Commits after the newest tag will be listed here until the next release.
 
 ---
 
+## [v3.1.0] - 2026-05-13
+
+- (`52ab324`) perf(builder): faster cyclic dependency check (memoized reachability, Set-based DFS); tests for explicit two-node cycle and acyclic dummy graph
+
+---
+
 ## [v3.0.0] - 2026-05-06
 
 - (`68b7ac8`) chore(deps): add tar and @aws-sdk/lib-storage
