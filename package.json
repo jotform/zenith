@@ -24,10 +24,10 @@
     "eslint-plugin-import": "2.27.5",
     "identity-obj-proxy": "3.0.0",
     "jest": "30.4.2",
-    "rollup": "3.30.0",
-    "tslib": "2.5.0",
     "jest-environment-jsdom": "30.4.1",
-    "jest-jasmine2": "30.4.2"
+    "jest-jasmine2": "30.4.2",
+    "rollup": "3.30.0",
+    "tslib": "2.5.0"
   },
   "scripts": {
     "lint": "eslint src/",
