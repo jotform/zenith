@@ -23,9 +23,11 @@
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.27.5",
     "identity-obj-proxy": "3.0.0",
-    "jest": "27.3.1",
-    "rollup": "3.21.4",
-    "tslib": "2.5.0"
+    "jest": "30.4.2",
+    "rollup": "3.30.0",
+    "tslib": "2.5.0",
+    "jest-environment-jsdom": "30.4.1",
+    "jest-jasmine2": "30.4.2"
   },
   "scripts": {
     "lint": "eslint src/",
@@ -40,12 +42,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.420.0",
-    "@aws-sdk/lib-storage": "3.420.0",
+    "@aws-sdk/client-s3": "3.1058.0",
+    "@aws-sdk/lib-storage": "3.1058.0",
     "commander": "10.0.1",
     "extract-zip": "2.0.1",
     "jszip": "3.10.1",
-    "tar": "6.2.1",
+    "tar": "7.5.11",
     "typescript": "^5.0.4",
     "voici.js": "^2.1.0",
     "workerpool": "6.4.0"
