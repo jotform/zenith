@@ -28,6 +28,10 @@ class RemoteCacher extends Cacher {
       region: configManagerInstance.getConfigValue('S3_REGION'),
       ...(endpoint ? { endpoint } : {}),
       ...(forcePathStyle ? { forcePathStyle: true } : {}),
+      // SDK 3.729+ defaults to CRC32 checksums on Put/Get, which breaks many
+      // S3-compatible backends (older MinIO, R2, etc.) with SignatureDoesNotMatch.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
       credentials: {
         accessKeyId: S3_ACCESS_KEY,
         secretAccessKey: S3_SECRET_KEY

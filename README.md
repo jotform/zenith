@@ -189,6 +189,8 @@ export S3_REGION=us-east-1
 ```
 Stop MinIO: `yarn minio:down`.
 
+If you see `SignatureDoesNotMatch: Invalid argument` against a non-AWS S3 endpoint after upgrading Zenith, ensure you are on a build that sets `requestChecksumCalculation: WHEN_REQUIRED` on the S3 client (3.3.0+), or set `AWS_REQUEST_CHECKSUM_CALCULATION=WHEN_REQUIRED` and `AWS_RESPONSE_CHECKSUM_VALIDATION=WHEN_REQUIRED` in the environment as a workaround.
+
 ### Redis cache
 
 1. Install Redis if needed: `brew install redis`
