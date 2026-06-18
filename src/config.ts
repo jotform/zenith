@@ -1,6 +1,7 @@
 enum CACHE_TYPES {
   LOCAL = 'local',
   REMOTE = 'remote',
+  REDIS = 'redis',
   LOCAL_FIRST = 'local-first',
   REMOTE_FIRST = 'remote-first'
 }
@@ -27,7 +28,9 @@ type ZenithConfig = {
   S3_REGION: string,
   ZENITH_DEBUG_ID: string,
   ZENITH_NO_CACHE: boolean,
-  LOCAL_CACHE_PATH: string
+  LOCAL_CACHE_PATH: string,
+  REDIS_URL: string,
+  REDIS_KEY_PREFIX: string,
 };
 
 type ConfigKeyMap = {
@@ -59,7 +62,9 @@ class ConfigManager {
       S3_REGION: process.env.S3_REGION || 'us-east-1',
       ZENITH_DEBUG_ID: process.env.ZENITH_DEBUG_ID || 'debug-log',
       ZENITH_NO_CACHE: Boolean(process.env.ZENITH_NO_CACHE) || false,
-      LOCAL_CACHE_PATH: process.env.LOCAL_CACHE_PATH || '.cache'
+      LOCAL_CACHE_PATH: process.env.LOCAL_CACHE_PATH || '.cache',
+      REDIS_URL: process.env.REDIS_URL || 'redis://127.0.0.1:6379',
+      REDIS_KEY_PREFIX: process.env.REDIS_KEY_PREFIX || 'zenith:',
     };
   }
 

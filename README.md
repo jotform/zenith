@@ -13,7 +13,7 @@ Create a `zenith.json` in your project root including `projects` and `buildConfi
 
 ## Features
 
--   **Local & Remote Caching:** Deploy faster using less bandwidth.
+-   **Local & Remote Caching:** Deploy faster using less bandwidth. Supports local disk, S3-compatible remote storage, and Redis.
 -   **No .git Required:** Ideal for team-based monorepo development.
 -   **Versatile Commands:** Supports `build`, `test`, and more.
 
@@ -26,6 +26,7 @@ Create a `zenith.json` in your project root including `projects` and `buildConfi
 - [zenith.json: What is it and why is it required?](#zenithjson-what-is-it-and-why-is-it-required)
 - [Required Parameters](#required-parameters)
   - [Environment Variables](#environment-variables)
+  - [Cache types (usage)](#cache-types-usage)
   - [Params](#params)
 - [Optional Parameters](#optional-parameters)
 - [Debugging](#debugging)
@@ -46,11 +47,52 @@ pnpm add @jotforminc/zenith
 
 From the terminal, run:
 
-
 ```
 pnpm zenith --target=("build" | "test") --project=("all" | <project_name>)
 ```
+
 Target and project arguments are required for now. Without them, the tool will not work.
+
+### Usage examples
+
+Local cache (default — artifacts stored under `.cache` on disk):
+
+```
+CACHE_TYPE=local pnpm zenith --target=build --project=all
+```
+
+Remote S3 cache (requires S3 credentials; see [Local S3 with MinIO](#local-s3-with-minio) for a local setup):
+
+```
+CACHE_TYPE=remote \
+S3_ACCESS_KEY=... \
+S3_SECRET_KEY=... \
+S3_BUCKET_NAME=... \
+S3_REGION=us-east-1 \
+pnpm zenith --target=build --project=all
+```
+
+Redis cache (requires a running Redis server; see [Redis cache](#redis-cache)):
+
+```
+CACHE_TYPE=redis \
+REDIS_URL=redis://127.0.0.1:6379 \
+pnpm zenith --target=build --project=all
+```
+
+Hybrid modes (write to both backends; read from the first that hits):
+
+```
+CACHE_TYPE=local-first pnpm zenith --target=build --project=all   # local, then remote S3
+CACHE_TYPE=remote-first pnpm zenith --target=build --project=all  # remote S3, then local
+```
+
+Optional flags used often in CI or debugging:
+
+```
+pnpm zenith --target=build --project=all --logLevel=3 --cache-format=zip
+```
+
 ## zenith.json: What is it and why is it required?
 Zenith looks for a file named "zenith.json" in the same folder where your root package.json file is. This file is used to determine the behavior of Zenith. It MUST include 'projects' and 'buildConfig' keys, and MAY include 'ignore' and 'appDirectories' keys. An example of usage is as follows.
 ```json
@@ -116,7 +158,9 @@ Zenith looks for a file named "zenith.json" in the same folder where your root p
 The project uses several required environment variables and params. Without them, the tool will not work as intended.
 ### Environment Variables
 ```
-- CACHE_TYPE (string): One of ['local', 'remote', 'local-first', 'remote-first'], 'local' by default. If 'remote', S3 environment variables are required.
+- CACHE_TYPE (string): One of ['local', 'remote', 'redis', 'local-first', 'remote-first'], 'local' by default. If 'remote' or hybrid modes that include remote, S3 environment variables are required. If 'redis', REDIS_URL is required (defaults to redis://127.0.0.1:6379).
+- REDIS_URL (string): Redis connection URL when CACHE_TYPE=redis. Default: redis://127.0.0.1:6379.
+- REDIS_KEY_PREFIX (string): Prefix for all Redis cache keys when CACHE_TYPE=redis. Default: zenith:.
 - S3_ACCESS_KEY (string): Access key to be used to get objects from and write objects to the buckets.
 - S3_SECRET_KEY (string): Secret key to be used to get objects from and write objects to the buckets.
 - S3_BUCKET_NAME (string): Bucket name to be written and read from.
@@ -144,6 +188,36 @@ export S3_BUCKET_NAME=zenith-cache
 export S3_REGION=us-east-1
 ```
 Stop MinIO: `yarn minio:down`.
+
+### Redis cache
+
+1. Install Redis if needed: `brew install redis`
+2. Start a local server: `yarn redis:up` (uses the `redis-server` binary on `127.0.0.1:6379`).
+   - If you prefer Docker, use `docker run -d --name zenith-redis -p 6379:6379 redis:7-alpine` (requires Docker Desktop to be running).
+3. Point Zenith at Redis:
+
+```
+export CACHE_TYPE=redis
+export REDIS_URL=redis://127.0.0.1:6379
+export REDIS_KEY_PREFIX=zenith:
+pnpm zenith --target=build --project=all
+```
+
+Stop Redis: `yarn redis:down`.
+
+Redis stores cache blobs as binary values keyed by the same paths used for S3/local storage (`zenith:` + `target/layoutHash/projectRoot/...`). Use a dedicated Redis instance or database index in shared environments.
+
+### Cache types (usage)
+
+| CACHE_TYPE | Where artifacts go | When to use |
+|------------|-------------------|-------------|
+| `local` | `.cache/` on disk (or `LOCAL_CACHE_PATH`) | Solo development, no shared cache needed |
+| `remote` | S3-compatible bucket | CI/CD teams sharing cache across machines |
+| `redis` | Redis server | Fast shared cache when you already run Redis; good for smaller/medium artifacts |
+| `local-first` | Local disk + S3 (read local first) | Dev machines with optional remote fallback |
+| `remote-first` | S3 + local disk (read remote first) | CI agents that also keep a local copy |
+
+For `remote`, `local-first`, and `remote-first`, set the S3 variables listed above. For `redis`, set `REDIS_URL` (and optionally `REDIS_KEY_PREFIX`).
 
 ### Cache format benchmark (local MinIO)
 

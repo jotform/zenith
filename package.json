@@ -1,7 +1,7 @@
 {
   "name": "@jotforminc/zenith",
   "packageManager": "yarn@1.22.21",
-  "version": "3.2.3",
+  "version": "3.3.0",
   "description": "",
   "main": "./build/index.js",
   "files": [
@@ -36,6 +36,8 @@
     "tsc:w": "tsc -w",
     "minio:up": "node scripts/minio-up.cjs",
     "minio:down": "node scripts/minio-down.cjs",
+    "redis:up": "node scripts/redis-up.cjs",
+    "redis:down": "node scripts/redis-down.cjs",
     "bench:cache-formats": "node scripts/benchmark-cache-formats.cjs"
   },
   "keywords": [],
@@ -47,6 +49,7 @@
     "commander": "10.0.1",
     "extract-zip": "2.0.1",
     "jszip": "3.10.1",
+    "redis": "^4.7.0",
     "tar": "7.5.11",
     "typescript": "^5.0.4",
     "voici.js": "^2.1.0",

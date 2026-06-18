@@ -1,6 +1,7 @@
 import Cacher from './Cacher';
 import LocalCacher from './LocalCacher';
 import RemoteCacher from './RemoteCacher';
+import RedisCacher from './RedisCacher';
 import HybridCacher from './HybridCacher';
 import { configManagerInstance } from '../../config';
 
@@ -12,6 +13,8 @@ export default class CacherFactory {
         return new LocalCacher();
       case 'remote':
         return new RemoteCacher();
+      case 'redis':
+        return new RedisCacher();
       case 'local-first':
       case 'remote-first':
         return new HybridCacher(cache) as Cacher;
