@@ -3,7 +3,7 @@ import { Readable } from 'stream';
 import Logger from '../../utils/logger';
 import { DebugJSON } from '../../types/ConfigTypes';
 import { configManagerInstance } from '../../config';
-import { isReadableStreamBody } from '../../utils/functions';
+import { isReadableStreamBody, readableToBuffer } from '../../utils/functions';
 import Cacher from './Cacher';
 
 class RedisCacher extends Cacher {
@@ -35,11 +35,7 @@ class RedisCacher extends Cacher {
 
   private static async bodyToBuffer(Body: string | Buffer | Readable): Promise<Buffer> {
     if (isReadableStreamBody(Body)) {
-      const chunks: Buffer[] = [];
-      for await (const chunk of Body) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-      }
-      return Buffer.concat(chunks);
+      return readableToBuffer(Body);
     }
     if (typeof Body === 'string') return Buffer.from(Body);
     return Body;
