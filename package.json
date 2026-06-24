@@ -32,6 +32,7 @@
   "scripts": {
     "lint": "eslint src/",
     "build": "tsc --build",
+    "pretest": "yarn build",
     "test": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests",
     "tsc:w": "tsc -w",
     "minio:up": "node scripts/minio-up.cjs",

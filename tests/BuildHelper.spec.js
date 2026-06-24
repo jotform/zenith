@@ -26,8 +26,13 @@ describe('BuildHelper tests', () => {
     })
 
     test('Should throw error if there is a circular dependency', async () => {
-        process.chdir('tests/__mocks__/mockRepo');
-        expect(() => execSync(`pnpm zenith --target=build --project=all`, { cwd: path.join(process.cwd()), encoding: 'utf-8', stdio: 'pipe' })).toThrow();
+        const originalCwd = process.cwd();
+        try {
+            process.chdir('tests/__mocks__/mockRepo');
+            expect(() => execSync(`pnpm zenith --target=build --project=all`, { cwd: path.join(process.cwd()), encoding: 'utf-8', stdio: 'pipe' })).toThrow();
+        } finally {
+            process.chdir(originalCwd);
+        }
     })
 
     test('controlCyclicDependencies throws on explicit dummy cycle (pkg-a <-> pkg-b)', async () => {

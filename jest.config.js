@@ -41,12 +41,13 @@ const config = () => {
       'node_modules[/\\\\].+\\.(js|jsx|mjs|cjs|ts|tsx)$'
     ],
     moduleNameMapper: {
-      '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy'
+      '^.+\\.module\\.(css|sass|scss)$': 'identity-obj-proxy',
+      '^voici\\.js$': '<rootDir>/tests/__mocks__/voici.js'
     }
   };
 
   if (process.env.CI === 'true') {
-    config.maxWorkers = 4;
+    confObject.maxWorkers = 4;
   }
 
   return confObject;
