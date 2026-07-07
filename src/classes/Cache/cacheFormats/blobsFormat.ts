@@ -8,6 +8,7 @@ import Logger from '../../../utils/logger';
 import AbstractCacheFormat, { CacheDirectoryParams, RecoverDirectoryParams } from './AbstractCacheFormat';
 import { listFilesRecursively } from './directoryStats';
 import { getFilesDownloadConcurrency, getFilesUploadConcurrency } from './settings';
+import { RECURSIVE_RM_OPTIONS } from '../../../utils/constants';
 
 type BlobManifestEntry = {
   path: string;
@@ -125,7 +126,7 @@ export default class BlobsCacheFormat extends AbstractCacheFormat {
       return 'Cache not found';
     }
 
-    await rm(outputPath, { recursive: true, force: true });
+    await rm(outputPath, RECURSIVE_RM_OPTIONS);
     await mkdir(outputPath, { recursive: true });
 
     await runWithConcurrency(manifest.files, getFilesDownloadConcurrency(), async (file) => {

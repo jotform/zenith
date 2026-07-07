@@ -1,12 +1,12 @@
-export interface ProjectStats {
-  buildProject: string;
-  time?: [number, number];
-}
+import type { TaskMetrics } from './index';
 
-export interface MissingProjectStats {
-  buildProject: string;
+export type ProjectStatus = 'HIT' | 'MISS' | 'STALE' | 'SKIP' | 'BUILT';
+
+export interface ProjectRunStats {
+  status: ProjectStatus;
   execTime?: [number, number];
-  cacheTime?: [number, number]
+  hashMs?: number;
+  metrics?: TaskMetrics;
 }
 
 export interface BuildParams {

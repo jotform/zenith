@@ -1,9 +1,11 @@
 import { DebugJSON } from '../../types/ConfigTypes';
+import { CacheSource } from '../../types';
 import { Readable } from 'stream';
 import Logger from '../../utils/logger';
 import { configManagerInstance } from '../../config';
+import { metricsCollector } from '../../metrics/MetricsCollector';
 import path = require('path');
-import { ROOT_PATH } from '../../utils/constants';
+import { ROOT_PATH, RECURSIVE_RM_OPTIONS } from '../../utils/constants';
 import { existsSync } from 'fs';
 import { stat, rm, mkdir } from 'fs/promises';
 import { getMissingRequiredFiles, isOutputTxt } from '../../utils/functions';
@@ -53,6 +55,7 @@ const getFormatByName = (cacher: Cacher, name: ConcreteCacheFormat) => {
 export default abstract class Cacher {
   cachePath = '';
   hasher = new Hasher();
+  cacheSource: CacheSource = 'remote';
 
   abstract putObject({Bucket, Key, Body}: {Bucket?: string, Key: string, Body: Buffer | string | Readable}): Promise<void>
   abstract getObject({Bucket, Key}: {Bucket?: string,Key: string}): Promise<Readable>
@@ -211,13 +214,14 @@ export default abstract class Cacher {
         });
         if (response === undefined) throw new Error('Error while recovering from cache: S3 Response Body is undefined');
         const stdout = await this.txtPipeEnd(response);
+        metricsCollector.setRecoverySource(this.cacheSource);
         if (!logAffected) Logger.log(2, stdout);
         return stdout;
       }
       try {
         const stats = await stat(outputPath);
         if (stats.isDirectory()) {
-          await rm(outputPath, { recursive: true, force: true });
+          await rm(outputPath, RECURSIVE_RM_OPTIONS);
           await mkdir(outputPath);
         }
       } catch (err) {
@@ -237,6 +241,7 @@ export default abstract class Cacher {
           outputPath,
         });
         if (recoveredHash !== 'Cache not found') {
+          metricsCollector.setRecoverySource(this.cacheSource);
           return recoveredHash;
         }
       }
@@ -248,6 +253,7 @@ export default abstract class Cacher {
           outputPath,
         });
         if (recoveredHash !== 'Cache not found') {
+          metricsCollector.setRecoverySource(this.cacheSource);
           return recoveredHash;
         }
       }

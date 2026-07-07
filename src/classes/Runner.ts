@@ -4,7 +4,7 @@ import BuilderFactory from './Builder/BuilderFactory';
 import ConfigHelperInstance from './ConfigHelper';
 import Logger from '../utils/logger';
 import { deepCloneMap } from '../utils/functions';
-import { CACHE_FORMATS, configManagerInstance } from '../config';
+import { CACHE_FORMATS, STATS_MODES, configManagerInstance } from '../config';
 import { PipeConfigArray } from '../types/ConfigTypes';
 
 export default class Runner {
@@ -81,6 +81,14 @@ export default class Runner {
         )
           .choices(Object.values(CACHE_FORMATS) as string[])
           .default(CACHE_FORMATS.ZIP)
+      )
+      .addOption(
+        new Option(
+          '--stats <mode>',
+          'End-of-run statistics block, independent of --logLevel: silent (summary only) | default (built projects, no cap) | full (all projects incl. cache hits, no cap).'
+        )
+          .choices(Object.values(STATS_MODES) as string[])
+          .default(STATS_MODES.DEFAULT)
       );
     program.parse(args);
     const options = program.opts();
@@ -127,6 +135,8 @@ export default class Runner {
     this.worker = options.worker;
     this.pipe = options.noPipe ? [] : ConfigHelperInstance.pipe;
     this.coloredOutput = options.coloredOutput === 'true';
+
+    configManagerInstance.updateConfig({ ZENITH_STATS_MODE: options.stats as STATS_MODES });
 
     Logger.setLogLevel(Number(options.logLevel));
   }

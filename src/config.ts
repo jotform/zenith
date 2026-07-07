@@ -14,11 +14,18 @@ export enum CACHE_FORMATS {
   AUTO = 'auto',
 }
 
+export enum STATS_MODES {
+  SILENT = 'silent',
+  DEFAULT = 'default',
+  FULL = 'full',
+}
+
 type ZenithConfig = {
   ZENITH_READ_ONLY: boolean,
   ZENITH_DEBUG: boolean,
   CACHE_TYPE: CACHE_TYPES,
   ZENITH_CACHE_FORMAT: CACHE_FORMATS,
+  ZENITH_STATS_MODE: STATS_MODES,
   S3_ACCESS_KEY: string,
   S3_SECRET_KEY: string,
   S3_BUCKET_NAME: string
@@ -52,6 +59,7 @@ class ConfigManager {
       ZENITH_DEBUG: Boolean(process.env.ZENITH_DEBUG) || false,
       CACHE_TYPE: Object.values(CACHE_TYPES).includes(cacheType) ? cacheType : CACHE_TYPES.LOCAL,
       ZENITH_CACHE_FORMAT: CACHE_FORMATS.ZIP,
+      ZENITH_STATS_MODE: STATS_MODES.DEFAULT,
       S3_ACCESS_KEY: process.env.S3_ACCESS_KEY || 'my-access-key',
       S3_SECRET_KEY: process.env.S3_SECRET_KEY || 'my-secret-key',
       S3_BUCKET_NAME: process.env.S3_BUCKET_NAME || 'my-bucket',

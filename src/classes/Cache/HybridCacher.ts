@@ -10,21 +10,24 @@ import LocalCacher from "./LocalCacher";
 import { configManagerInstance } from "../../config";
 import { Readable } from "stream";
 import { DebugJSON } from "../../types/ConfigTypes";
+import { CacheSource } from "../../types";
 import { isReadableStreamBody } from "../../utils/functions";
+import { decorateCacherWithMetrics } from "./metrics/cacherMetricsDecorator";
 import Logger from "../../utils/logger";
 import Hasher from "../Hasher";
 
 export default class HybridCacher implements Cacher {
     cachePath = '';
+    cacheSource: CacheSource = 'remote';
     cachers: Cacher[] = [];
     hasher = new Hasher();
 
     constructor(type: 'local-first' | 'remote-first') {
         if (type === 'local-first') {
-            this.cachers = [new LocalCacher(), new RemoteCacher()];
+            this.cachers = [decorateCacherWithMetrics(new LocalCacher()), decorateCacherWithMetrics(new RemoteCacher())];
         }
         if (type === 'remote-first') {
-            this.cachers = [new RemoteCacher(), new LocalCacher()];
+            this.cachers = [decorateCacherWithMetrics(new RemoteCacher()), decorateCacherWithMetrics(new LocalCacher())];
         }
     }
 
@@ -45,9 +48,14 @@ export default class HybridCacher implements Cacher {
 
     async getObject({ Bucket, Key }: { Bucket?: string | undefined, Key: string }): Promise<Readable> {
         for (const cacher of this.cachers) {
-            const object = await cacher.getObject({ Bucket, Key });
-            if (object instanceof Readable) {
-                return object;
+            try {
+                const object = await cacher.getObject({ Bucket, Key });
+                if (object instanceof Readable) {
+                    return object;
+                }
+            } catch (error) {
+                const reason = error instanceof Error ? error.message : String(error);
+                Logger.log(3, `Hybrid getObject miss for ${Key}, trying next backend: ${reason}`);
             }
         }
         throw new Error(`Could not find ${Key} in cache`);

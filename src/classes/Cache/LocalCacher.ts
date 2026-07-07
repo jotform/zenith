@@ -18,6 +18,7 @@ class LocalCacher extends Cacher {
 
   constructor() {
     super();
+    this.cacheSource = 'local';
     this.cachePath = configManagerInstance.getCachePath();
     if (!path.isAbsolute(this.cachePath)) {
       this.cachePath = path.join(ROOT_PATH, this.cachePath);

@@ -8,6 +8,7 @@ import { Readable } from 'stream';
 import * as tar from 'tar';
 import Logger from '../../../utils/logger';
 import AbstractCacheFormat, { CacheDirectoryParams, RecoverDirectoryParams } from './AbstractCacheFormat';
+import { RECURSIVE_RM_OPTIONS } from '../../../utils/constants';
 
 export default class TarCacheFormat extends AbstractCacheFormat {
   readonly name = 'tar' as const;
@@ -88,7 +89,7 @@ export default class TarCacheFormat extends AbstractCacheFormat {
       });
       return this.context.hasher.getHash(outputPath);
     } finally {
-      await fsp.rm(tmpRoot, { recursive: true, force: true });
+      await fsp.rm(tmpRoot, RECURSIVE_RM_OPTIONS);
     }
   }
 }

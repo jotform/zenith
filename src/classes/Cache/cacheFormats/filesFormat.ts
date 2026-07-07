@@ -8,6 +8,7 @@ import Logger from '../../../utils/logger';
 import AbstractCacheFormat, { CacheDirectoryParams, RecoverDirectoryParams } from './AbstractCacheFormat';
 import { listFilesRecursively } from './directoryStats';
 import { getFilesDownloadConcurrency, getFilesInlineMaxBytes, getFilesUploadConcurrency } from './settings';
+import { RECURSIVE_RM_OPTIONS } from '../../../utils/constants';
 
 type CachedFileEntry = {
   path: string;
@@ -104,7 +105,7 @@ export default class FilesCacheFormat extends AbstractCacheFormat {
       return 'Cache not found';
     }
 
-    await rm(outputPath, { recursive: true, force: true });
+    await rm(outputPath, RECURSIVE_RM_OPTIONS);
     await mkdir(outputPath, { recursive: true });
 
     await runWithConcurrency(manifest.files, getFilesDownloadConcurrency(), async (file) => {
