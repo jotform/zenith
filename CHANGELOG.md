@@ -6,7 +6,8 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 
 ## [Unreleased]
 
-Commits after the newest tag will be listed here until the next release.
+- feat: unified per-project build stats — a `Build — by time` table and a `Largest Artifacts` table (plus a summary block) replace the Missing Projects / Slow Cache Recoveries / Hash Mismatches tables. A new `--stats <silent | default | full>` flag controls the block independently of `--logLevel`. `SKIP` rows are omitted and row counts are not capped; full status counts stay in the summary. Raw output size and file counts are measured only when a project is actually built, so cache-hit rows show `-` in those columns.
+- fix: zip cache recovery hung forever on Node 24 — `extract-zip`'s yauzl@2 read stream stalls mid-entry on deflate entries larger than ~1.4 MB (reproduced byte-for-byte outside Zenith), deadlocking the recovery worker. Zip extraction now uses a small yauzl@3.3.1-based streaming extractor (`extractZipFileToDir`); the `extract-zip` dependency was removed.
 
 ---
 
