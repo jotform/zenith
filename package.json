@@ -9,7 +9,7 @@
     "README.md"
   ],
   "bin": {
-    "zenith": "./build/index.js"
+    "zenith": "./bin/setup.js"
   },
   "devDependencies": {
     "@aws-sdk/types": "3.310.0",
