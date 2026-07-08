@@ -1,13 +1,14 @@
 import { createWriteStream } from 'fs';
-import { randomBytes } from 'crypto';
 import * as fsp from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { randomBytes } from 'crypto';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
-import extract from 'extract-zip';
 import Zipper from '../../Zipper';
 import Logger from '../../../utils/logger';
+import { RECURSIVE_RM_OPTIONS } from '../../../utils/constants';
+import { extractZipFileToDir } from './zipExtract';
 import AbstractCacheFormat, { CacheDirectoryParams, RecoverDirectoryParams } from './AbstractCacheFormat';
 
 export default class ZipCacheFormat extends AbstractCacheFormat {
@@ -51,10 +52,10 @@ export default class ZipCacheFormat extends AbstractCacheFormat {
     const tmpZip = join(tmpRoot, 'artifact.zip');
     try {
       await pipeline(stream, createWriteStream(tmpZip));
-      await extract(tmpZip, { dir: outputPath });
+      await extractZipFileToDir(tmpZip, outputPath);
       return await this.context.hasher.getHash(outputPath);
     } finally {
-      await fsp.rm(tmpRoot, { recursive: true, force: true });
+      await fsp.rm(tmpRoot, RECURSIVE_RM_OPTIONS);
     }
   }
 }

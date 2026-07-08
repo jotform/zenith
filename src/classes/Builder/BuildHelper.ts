@@ -6,9 +6,13 @@ import CacherFactory from '../Cache/CacheFactory';
 import Hasher from '../Hasher';
 import WorkerHelper from '../WorkerHelper';
 import ConfigHelper from '../ConfigHelper';
-import { deepCloneMap, formatMissingProjects, formatTimeDiff, isCommandDummy, isOutputTxt } from '../../utils/functions';
+import { deepCloneMap, isCommandDummy, isOutputTxt } from '../../utils/functions';
+import { hrtimeToMs } from '../../utils/time';
+import { buildTimeTable, buildSizeTable } from '../../stats/statsTables';
+import { buildStatsSummary, statsRenderPlan } from '../../stats/statsSummary';
+import StatsAggregator from '../../stats/StatsAggregator';
 import Logger from '../../utils/logger';
-import { ProjectStats, BuildParams, PackageJsonType, MissingProjectStats } from '../../types/BuildTypes';
+import { BuildParams, PackageJsonType, ProjectRunStats } from '../../types/BuildTypes';
 import LocalCacher from '../Cache/LocalCacher';
 import RemoteCacher from '../Cache/RemoteCacher';
 import { configManagerInstance } from '../../config';
@@ -22,15 +26,11 @@ export default class BuildHelper extends WorkerHelper {
 
   totalCount = 0;
 
-  fromCache = 0;
+  stats = new StatsAggregator();
 
-  built = 0;
-
-  missingProjects : Array<MissingProjectStats> = [];
-
-  hashMismatchProjects : Array<MissingProjectStats> = [];
-
-  slowCacheRecoveries : Array<ProjectStats> = [];
+  get projectStats(): Map<string, ProjectRunStats> {
+    return this.stats.projectStats;
+  }
 
   compareHash = true;
 
@@ -109,6 +109,10 @@ export default class BuildHelper extends WorkerHelper {
 
   getProjects(): Map<string, Set<string>> {
     return this.projects;
+  }
+
+  recordProjectStats(buildProject: string, patch: Partial<ProjectRunStats>): void {
+    this.stats.record(buildProject, patch);
   }
 
   addProject(project: string): void {
@@ -221,15 +225,16 @@ export default class BuildHelper extends WorkerHelper {
     if (execution instanceof Error) {
       throw Error;
     }
-    const { output, execTime, cacheTime } = execution;
+    const { output, execTime, metrics } = execution;
     if (!isCommandDummy(buildPath, script)) {
       Logger.log(2, this.outputColor, 'Cache does not exist for => ', buildProject, hash);
-      this.missingProjects.push({ buildProject, execTime, cacheTime });
+      this.recordProjectStats(buildProject, { status: 'MISS', execTime, metrics });
+    } else {
+      this.recordProjectStats(buildProject, { status: 'SKIP' });
     }
     if (output && isOutputTxt(outputs)) {
       Logger.log(2, this.outputColor, output);
     }
-    this.built++;
   }
 
   async buildResolver(project: string): Promise<void> {
@@ -252,24 +257,30 @@ export default class BuildHelper extends WorkerHelper {
       }
       const { outputs, script, constantDependencies, compareRemoteHashes, requiredFiles, additionalFiles } = config[this.command];
       const buildPath = path.join(ROOT_PATH, root);
+      const hashStart = process.hrtime();
       const hash = await this.hasher.getHash(buildPath, script, this.debug, this.compareWith, constantDependencies, additionalFiles || []);
+      this.recordProjectStats(buildProject, { hashMs: hrtimeToMs(process.hrtime(hashStart)) });
       this.hasher.hashJSON[buildProject] = hash;
 
       config[this.command].afterGetHashCallback?.(this, hash, buildProject);
       
       if (this.skipPackageJson && !this.doesScriptExist(root, script)) {
         Logger.log(3, this.outputColor, 'Skipping project => ', buildProject, ' because it does not have the script => ', script);
+        this.recordProjectStats(buildProject, { status: 'SKIP' });
         await this.buildResolver(buildProject);
         return;
       }
       if (isCommandDummy(buildPath, script)) {
         Logger.log(3, this.outputColor, 'Skipping project => ', buildProject, ' because it is a dummy script (return value is true).');
+        this.recordProjectStats(buildProject, { status: 'SKIP' });
         await this.buildResolver(buildProject);
         return;
       }
       if (this.noCache) {
-        await this.execute(buildPath, script, '', root, outputs, buildProject, requiredFiles, this.noCache);
-        this.built++;
+        const execution = await this.execute(buildPath, script, '', root, outputs, buildProject, requiredFiles, this.noCache);
+        if (!(execution instanceof Error)) {
+          this.recordProjectStats(buildProject, { status: 'BUILT', execTime: execution.execTime, metrics: execution.metrics });
+        }
         await this.buildResolver(buildProject);
         return;
       }
@@ -282,7 +293,7 @@ export default class BuildHelper extends WorkerHelper {
       }
       for (const output of outputs) {
         Logger.log(3, this.outputColor, 'Recovering from cache', buildProject, 'with hash => ', hash);
-        const {result: recoverResponse, time} = await this.anotherJob(hash, root, output, script, this.compareHash && !!compareRemoteHashes, this.logAffected);
+        const { result: recoverResponse, metrics } = await this.anotherJob(hash, root, output, script, this.compareHash && !!compareRemoteHashes, this.logAffected);
         if (recoverResponse === 'Cache not found') {
           await this.runTarget(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
           break;
@@ -290,14 +301,9 @@ export default class BuildHelper extends WorkerHelper {
         if (!recoverResponse) {
           const execution = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
           if (execution instanceof Error) throw execution;
-          this.hashMismatchProjects.push({ buildProject, execTime: execution.execTime, cacheTime: execution.cacheTime });
-          this.built++;
+          this.recordProjectStats(buildProject, { status: 'STALE', execTime: execution.execTime, metrics: execution.metrics });
         } else {
-          this.fromCache++;
-          const delta = Number((time[0] + time[1] / 1e9).toFixed(3));
-          if (delta > 10) {
-            this.slowCacheRecoveries.push({ buildProject, time });
-          }
+          this.recordProjectStats(buildProject, { status: 'HIT', metrics });
         }
       }
       await this.buildResolver(buildProject);
@@ -328,25 +334,32 @@ export default class BuildHelper extends WorkerHelper {
       if (!stats.pendingTasks && !stats.activeTasks) {
         void this.pool.terminate();
         Logger.log(2, this.outputColor, `Zenith completed command: ${this.command}. ${this.noCache ? '(Cache was not used)' : ''}`);
-        Logger.log(2, this.outputColor, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
-        Logger.log(2, this.outputColor, `${this.fromCache} projects used from cache,`);
-        Logger.log(2, this.outputColor, `${this.built} projects used without cache.`);
-        // eslint-disable-next-line no-console
-        console.log(this.outputColor);
-        if (this.missingProjects.length > 0 && Logger.logLevel > 1) {
-          (new Table(formatMissingProjects(this.missingProjects, `Missing Projects (${this.missingProjects.length})`))).print();
+        if (this.projectStats.size > 0) {
+          const statsMode = configManagerInstance.getConfigValue('ZENITH_STATS_MODE');
+          const { showTables, builtOnly } = statsRenderPlan(statsMode);
+          if (showTables) {
+            const timeRows = buildTimeTable(this.projectStats, { builtOnly });
+            if (timeRows.length > 0) {
+              // eslint-disable-next-line no-console
+              console.log(this.outputColor, 'Build — by time');
+              (new Table(timeRows)).print();
+              // eslint-disable-next-line no-console
+              console.log('\x1b[0m');
+            }
+            const sizeRows = buildSizeTable(this.projectStats, { builtOnly });
+            if (sizeRows.length > 0) {
+              // eslint-disable-next-line no-console
+              console.log(this.outputColor, 'Largest Artifacts');
+              (new Table(sizeRows)).print();
+              // eslint-disable-next-line no-console
+              console.log('\x1b[0m');
+            }
+          }
+          const summaryContext = { wallMs: hrtimeToMs(process.hrtime(this.startTime)) };
+          // Stats block is independent of logLevel — print directly, not via Logger.
           // eslint-disable-next-line no-console
-          console.log('\n');
+          buildStatsSummary(this.projectStats, summaryContext).forEach(line => console.log(`${this.outputColor}${line}`, '\x1b[0m'));
         }
-        if (this.slowCacheRecoveries.length > 0 && Logger.logLevel > 1) {
-          (new Table(formatMissingProjects(this.slowCacheRecoveries, `Slow Cache Recoveries (${this.slowCacheRecoveries.length})`))).print();
-        }
-        if (this.hashMismatchProjects.length > 0 && Logger.logLevel > 1) {
-          (new Table(formatMissingProjects(this.hashMismatchProjects, `Hash Mismatches (${this.hashMismatchProjects.length})`))).print();
-        }
-        // eslint-disable-next-line no-console
-        console.log("\x1b[0m");
-        Logger.log(2, this.outputColor, `Total process took ${formatTimeDiff(process.hrtime(this.startTime))}.`);
         if (this.debug && configManagerInstance.getConfigValue('ZENITH_DEBUG_ID')) {
           this.cacher.updateDebugFile(this.hasher.getDebugJSON(), this.command, this.debugLocation);
           Logger.log(2, this.outputColor, 'DEBUG JSON UPDATED');

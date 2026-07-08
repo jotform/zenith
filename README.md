@@ -29,6 +29,7 @@ Create a `zenith.json` in your project root including `projects` and `buildConfi
   - [Cache types (usage)](#cache-types-usage)
   - [Params](#params)
 - [Optional Parameters](#optional-parameters)
+- [Build statistics output](#build-statistics-output)
 - [Debugging](#debugging)
 
 
@@ -254,7 +255,7 @@ The following parameters are not required to work, but can be used to modify the
 -w, --worker <number>: Worker Number (default = 6): sets the maximum number of workers that run concurrently.
 
 
--l, --logLevel <1 | 2 | 3>: Sets the log level. 1=silent mode. 2=default mode, which only shows errors and statistics after completion. 3=verbose mode, logs cache hits, misses, and recoveries.
+-l, --logLevel <1 | 2 | 3>: Sets the log level for operational logs. 1=silent mode. 2=default mode (errors only). 3=verbose mode, logs cache hits, misses, and recoveries. Note: the end-of-run statistics block is controlled separately by --stats, independently of this flag.
 
 
 -ch, --noCompareHash: default: false. If false, will compare remote folders\' and local folders\' hash and execute target if hashes are not the same.
@@ -264,8 +265,78 @@ The following parameters are not required to work, but can be used to modify the
 
 
 --cache-format <zip | files | tar | blobs | auto>: Cache object layout for this run. Default is `zip` (see `--help`). Values: `zip` — single archive per output; `files` — one object per file plus manifest (many small files can be slow remotely); `tar` — single uncompressed tar per output; `blobs` — content-addressed `blobs/<sha256>` plus manifest; `auto` — heuristic choice among those. **Cache key layout:** The build/content hash is unchanged; directory outputs use `target/layoutHash/projectRoot/…` where `layoutHash` mixes that hash with the concrete format so e.g. zip and tar never share a prefix. Stdout caches use `target/contentHash/projectRoot/`. Older buckets without `layoutHash` still work via a legacy prefix. Pass this flag only when you want to override the default; omitting it keeps `zip`.
+
+
+--stats <silent | default | full>: Controls the end-of-run statistics block, independently of --logLevel. `silent` prints only the summary block (no tables). `default` prints both tables limited to projects that were built this run (cache hits excluded), with no row cap. `full` prints both tables for all projects including cache hits, with no row cap. Default: `default`.
 ```
 
+
+## Build statistics output
+
+At the end of each run, Zenith prints — unless `--stats silent` — two per-project stats tables (a `Build — by time` table sorted by total time, and a `Largest Artifacts` table sorted by uncompressed output size) followed by a summary block. Row counts are not capped. In the default `--stats default` mode the tables list only projects built this run; `--stats full` also includes cache-hit rows. `SKIP` rows are always omitted; full status counts always appear in the summary. Because raw output size is measured only when a project is built, cache-hit rows show `-` for `Out Size`/`Files`, and `Largest Artifacts` therefore lists only built projects. See `--stats` under [Optional Parameters](#optional-parameters).
+
+```
+Zenith completed command: build.
+
+Build — by time
+ Project   Source  Exec    Hash   Arch   Up     Down   Extr     Total   Out Size  Files  Cache Size
+ --------  ------  ------  -----  -----  -----  -----  -------  ------  --------  -----  ----------
+ @jf/app1  built   42.10s  0.31s  2.10s  1.10s  -      -        45.61s  18.4 MB   312    5.9 MB
+ @jf/app2  built   12.00s  0.09s  0.80s  0.30s  -      -        13.19s  5.0 MB    88     1.7 MB
+ @jf/lib2  remote  -       0.12s  -      -      9.80s  2.50s !  12.42s  -         -      36.3 MB
+ @jf/lib1  local   -       0.05s  -      -      0.60s  0.20s    0.85s   -         -      918.0 KB
+
+Largest Artifacts
+ Project   Out Size  Files  Cache Size  Total
+ --------  --------  -----  ----------  ------
+ @jf/app1  18.4 MB   312    5.9 MB      45.61s
+ @jf/app2  5.0 MB    88     1.7 MB      13.19s
+
+Total of 5 projects are finished.
+2 projects used from cache,
+2 projects used without cache.
+
+Total process took 46.000s. (parallelism 1.6x)
+```
+
+Controlled by `--stats` (default `default`), independently of `--logLevel`. Use `--stats silent` to print only the summary block, or `--stats full` to add cache-hit rows.
+
+### Summary block
+
+Below the tables, Zenith prints:
+
+- `Total of <N> projects are finished.` — every project that ran, `SKIP` included.
+- `<X> projects used from cache,` — `HIT` count.
+- `<Y> projects used without cache.` — built count (`MISS` + `STALE` + `--noCache` `BUILT`); `SKIP` projects appear in neither line.
+- `Total process took <wall>. (parallelism <p>x)` — wall-clock run time, and `parallelism` = Σ per-project time ÷ wall.
+
+### Column glossary
+
+The `Build — by time` table carries every column below. The `Largest Artifacts` table repeats `Out Size`, `Files`, `Cache Size`, and `Total`.
+
+| Column | Meaning |
+|--------|---------|
+| `Source` | Where the result came from: `local` or `remote` for a cache hit (the backend that served it), or `built` when the project was run (miss / stale / `--noCache`). Full status counts still appear in the summary |
+| `Exec` | Script run time |
+| `Hash` | Input hashing time |
+| `Arch` | Archive/compress — cache-write remainder (non-network portion of the write phase) |
+| `Up` | Upload transfer time to the cache backend |
+| `Down` | Download transfer time from the cache backend |
+| `Extr` | Extract — recovery remainder (`recover total − download`, clamped ≥ 0); approximate for streamed formats because extraction overlaps the download. A `!` suffix marks recoveries where `download + extract > 10 s` |
+| `Out Size` | Raw uncompressed output directory size. Only measured when the project is built, so cache-hit rows show `-` |
+| `Files` | Number of output files. Same measurement caveat as `Out Size` — `-` on cache hits |
+| `Cache Size` | Bytes moved to/from cache backends (upload + download); in hybrid modes (`local-first`, `remote-first`) each backend is counted separately so the total reflects real bandwidth |
+| `Total` | That project's total time — `Exec + Hash + Arch + Up + Down + Extr` |
+
+### Status glossary
+
+| Status | Meaning |
+|--------|---------|
+| `HIT` | Artifact recovered from cache; no build ran |
+| `MISS` | Not found in cache; project was built and the result was cached |
+| `STALE` | Hash mismatch — recovered artifact hash did not match the stored hash; project was rebuilt |
+| `SKIP` | Dummy script (`true`) or missing script with `--skipPackageJson`; not built or cached. Counted in the summary but not shown as a table row |
+| `BUILT` | Executed with `--noCache`; cache was bypassed entirely |
 
 
 ## Debugging
