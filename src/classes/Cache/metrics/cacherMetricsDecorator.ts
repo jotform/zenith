@@ -39,6 +39,9 @@ export const decorateCacherWithMetrics = <T extends ObjectStoreLike>(cacher: T):
   cacher.getObject = async (params: GetObjectParams): Promise<Readable> => {
     const start = nowMs();
     const stream = await rawGet(params);
+    // Contract: callers must fully drain the returned stream (all current
+    // consumers do), otherwise the end callback never fires and this download's
+    // duration/bytes stay unrecorded.
     return countReadable(stream, bytes => {
       const end = nowMs();
       metricsCollector.addDownload(end - start, bytes);

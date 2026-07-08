@@ -48,6 +48,10 @@ export default class HybridCacher implements Cacher {
 
     async getObject({ Bucket, Key }: { Bucket?: string | undefined, Key: string }): Promise<Readable> {
         for (const cacher of this.cachers) {
+            // Intentional fallback: a failure from one backend (e.g. a remote
+            // timeout on remote-first) must not abort the whole lookup — we try
+            // the next cacher. Only after every backend fails do we throw the
+            // final miss below; this catch is not swallowing that miss.
             try {
                 const object = await cacher.getObject({ Bucket, Key });
                 if (object instanceof Readable) {
