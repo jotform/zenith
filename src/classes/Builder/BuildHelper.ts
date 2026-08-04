@@ -18,6 +18,9 @@ import RemoteCacher from '../Cache/RemoteCacher';
 import { configManagerInstance } from '../../config';
 
 export default class BuildHelper extends WorkerHelper {
+  /** Set once on hard fail so concurrent builders don't race exit / mask the real error. */
+  static exiting = false;
+
   projects : Map<string, Set<string>> = new Map();
 
   command : string;
@@ -30,6 +33,25 @@ export default class BuildHelper extends WorkerHelper {
 
   get projectStats(): Map<string, ProjectRunStats> {
     return this.stats.projectStats;
+  }
+
+  /**
+   * Fail the CLI without awaiting pool.terminate.
+   * Workers blocked in execSync cannot be force-killed until the child exits, so
+   * `await pool.terminate(true)` hangs for the duration of sibling builds.
+   */
+  failFast(buildProject: string, error: Error): never {
+    if (!BuildHelper.exiting) {
+      BuildHelper.exiting = true;
+      Logger.log(3, this.outputColor, 'ERR-B1 :: project: ', buildProject, ' error: ', error.message);
+      void this.pool.terminate(true).catch(() => undefined);
+    }
+    process.exit(1);
+  }
+
+  /** Cascade rejects from force-terminate — park until process.exit from the primary failure. */
+  private static isTerminateCascade(error: Error): boolean {
+    return error.message === 'Worker terminated' || error.message === 'Pool terminated';
   }
 
   compareHash = true;
@@ -223,7 +245,7 @@ export default class BuildHelper extends WorkerHelper {
   async runTarget(buildPath: string, script: string, hash: string, root: string, outputs: Array<string>, buildProject: string, requiredFiles?: string[]): Promise<void> {
     const execution = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
     if (execution instanceof Error) {
-      throw Error;
+      throw execution;
     }
     const { output, execTime, metrics } = execution;
     if (!isCommandDummy(buildPath, script)) {
@@ -278,9 +300,10 @@ export default class BuildHelper extends WorkerHelper {
       }
       if (this.noCache) {
         const execution = await this.execute(buildPath, script, '', root, outputs, buildProject, requiredFiles, this.noCache);
-        if (!(execution instanceof Error)) {
-          this.recordProjectStats(buildProject, { status: 'BUILT', execTime: execution.execTime, metrics: execution.metrics });
+        if (execution instanceof Error) {
+          throw execution;
         }
+        this.recordProjectStats(buildProject, { status: 'BUILT', execTime: execution.execTime, metrics: execution.metrics });
         await this.buildResolver(buildProject);
         return;
       }
@@ -309,9 +332,12 @@ export default class BuildHelper extends WorkerHelper {
       await this.buildResolver(buildProject);
     } catch (error) {
       if (error instanceof Error) {
-        Logger.log(3, this.outputColor, 'ERR-B1 :: project: ', buildProject, ' error: ', error.message);
-        await this.pool.terminate(true);
-        throw error;
+        if (BuildHelper.isTerminateCascade(error) || BuildHelper.exiting) {
+          // Sibling workers rejected by force-terminate — wait for primary failFast exit.
+          await new Promise(() => undefined);
+          return;
+        }
+        this.failFast(buildProject, error);
       } else throw new Error('Builder failed.');
     }
   }
