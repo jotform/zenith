@@ -12,6 +12,7 @@ import { buildTimeTable, buildSizeTable } from '../../stats/statsTables';
 import { buildStatsSummary, statsRenderPlan } from '../../stats/statsSummary';
 import StatsAggregator from '../../stats/StatsAggregator';
 import Logger from '../../utils/logger';
+import { ZenithCommandError, toZenithCommandError } from '../../utils/errors';
 import { BuildParams, PackageJsonType, ProjectRunStats } from '../../types/BuildTypes';
 import LocalCacher from '../Cache/LocalCacher';
 import RemoteCacher from '../Cache/RemoteCacher';
@@ -60,11 +61,32 @@ export default class BuildHelper extends WorkerHelper {
 
   outputColor = '';
 
+  /** First real command failure of the run; siblings must not overwrite it. */
+  failure: ZenithCommandError | null = null;
+
+  aborted = false;
+
+  private shutdownPromise: Promise<void> | null = null;
+
   constructor(command : string, worker : string, color: boolean) {
     super(command, worker);
     this.command = command;
     this.cacher = CacherFactory.getCacher();
     this.outputColor = color ? `\x1b[3${Math.floor(Math.random() * 6) + 1}m` : '';
+  }
+
+  /**
+   * Graceful pool shutdown, at most once. A forced terminate kills live threads
+   * and workerpool then rejects every in-flight task with "Workerpool Worker
+   * terminated Unexpectedly", masking the failure we actually want to report.
+   * It has to be idempotent because a WorkerHandler holds a single termination
+   * callback slot: concurrent terminate() calls overwrite each other and every
+   * caller but the last waits on a promise that never settles.
+   */
+  shutdown(): Promise<void> {
+    // workerpool returns its own thenable, so adapt it to a native promise.
+    if (!this.shutdownPromise) this.shutdownPromise = Promise.resolve(this.pool.terminate(false)).then(() => undefined);
+    return this.shutdownPromise;
   }
 
   async init({
@@ -221,11 +243,7 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async runTarget(buildPath: string, script: string, hash: string, root: string, outputs: Array<string>, buildProject: string, requiredFiles?: string[]): Promise<void> {
-    const execution = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
-    if (execution instanceof Error) {
-      throw Error;
-    }
-    const { output, execTime, metrics } = execution;
+    const { output, execTime, metrics } = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
     if (!isCommandDummy(buildPath, script)) {
       Logger.log(2, this.outputColor, 'Cache does not exist for => ', buildProject, hash);
       this.recordProjectStats(buildProject, { status: 'MISS', execTime, metrics });
@@ -243,6 +261,7 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async builder(buildProject: string) {
+    if (this.aborted) return;
     try {
       this.totalCount++;
       const root = ConfigHelper.projects[buildProject];
@@ -278,9 +297,7 @@ export default class BuildHelper extends WorkerHelper {
       }
       if (this.noCache) {
         const execution = await this.execute(buildPath, script, '', root, outputs, buildProject, requiredFiles, this.noCache);
-        if (!(execution instanceof Error)) {
-          this.recordProjectStats(buildProject, { status: 'BUILT', execTime: execution.execTime, metrics: execution.metrics });
-        }
+        this.recordProjectStats(buildProject, { status: 'BUILT', execTime: execution.execTime, metrics: execution.metrics });
         await this.buildResolver(buildProject);
         return;
       }
@@ -300,7 +317,6 @@ export default class BuildHelper extends WorkerHelper {
         }
         if (!recoverResponse) {
           const execution = await this.execute(buildPath, script, hash, root, outputs, buildProject, requiredFiles);
-          if (execution instanceof Error) throw execution;
           this.recordProjectStats(buildProject, { status: 'STALE', execTime: execution.execTime, metrics: execution.metrics });
         } else {
           this.recordProjectStats(buildProject, { status: 'HIT', metrics });
@@ -308,11 +324,12 @@ export default class BuildHelper extends WorkerHelper {
       }
       await this.buildResolver(buildProject);
     } catch (error) {
-      if (error instanceof Error) {
-        Logger.log(3, this.outputColor, 'ERR-B1 :: project: ', buildProject, ' error: ', error.message);
-        await this.pool.terminate(true);
-        throw error;
-      } else throw new Error('Builder failed.');
+      const failure = toZenithCommandError(error, { project: buildProject, script: this.command, phase: 'execute' });
+      Logger.log(3, this.outputColor, 'ERR-B1 :: project: ', buildProject, ' error: ', failure.message);
+      if (!this.failure) this.failure = failure;
+      this.aborted = true;
+      await this.shutdown();
+      throw failure;
     }
   }
 
@@ -332,7 +349,7 @@ export default class BuildHelper extends WorkerHelper {
     const stats = this.pool.stats();
     if (!projects.length) {
       if (!stats.pendingTasks && !stats.activeTasks) {
-        void this.pool.terminate();
+        void this.shutdown();
         Logger.log(2, this.outputColor, `Zenith completed command: ${this.command}. ${this.noCache ? '(Cache was not used)' : ''}`);
         if (this.projectStats.size > 0) {
           const statsMode = configManagerInstance.getConfigValue('ZENITH_STATS_MODE');
@@ -367,11 +384,21 @@ export default class BuildHelper extends WorkerHelper {
       }
       return;
     }
-    await Promise.all(projects.map(async eachProject => {
-      if (!this.started.has(eachProject)) {
-        this.started.add(eachProject);
+    // Let every branch settle before rethrowing: a plain Promise.all surfaces
+    // whichever rejection won the race, which is usually pool-shutdown noise
+    // rather than the command failure that actually stopped the run.
+    const settled = await Promise.all(projects.map(async eachProject => {
+      if (this.started.has(eachProject)) return null;
+      this.started.add(eachProject);
+      try {
         await this.builder(eachProject);
+        return null;
+      } catch (error) {
+        return error;
       }
     }));
+    if (this.failure) throw this.failure;
+    const rejection = settled.find(result => result !== null);
+    if (rejection) throw toZenithCommandError(rejection, { script: this.command, phase: 'execute' });
   }
 }
