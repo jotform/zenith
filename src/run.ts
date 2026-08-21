@@ -15,8 +15,6 @@ export const run = async () => {
         await RunnerHelper.runWrapper();
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.log('ERR => R-I ::');
     if (error instanceof Error) throw error;
     throw Error(String(error));
   }

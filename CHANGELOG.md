@@ -11,6 +11,12 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 
 ---
 
+## [v3.7.0] - 2026-08-21
+
+- fix: a failing target reported `Workerpool Worker terminated Unexpectedly` instead of the actual error. The builder force-killed the pool on the first failure, so workerpool rejected every in-flight task with that message and `Promise.all` surfaced whichever rejection won the race; on top of that the real error was replaced with `Executing worker failed` in `WorkerHelper`, and `runTarget` threw the `Error` constructor rather than an instance. Failures now travel as a structured `ZenithCommandError` (project, script, shell command, cwd, exit code, signal, full stdout and stderr), the pool shuts down gracefully so siblings are not rejected with termination noise, and the run ends with a single failure block and exit code 1. Pool shutdown is memoized because a workerpool `WorkerHandler` holds a single termination callback slot: without it, the concurrent graceful terminates issued by each failing project overwrite each other and every caller but the last waits on a promise that never settles, draining the event loop and exiting 0 with no output at all.
+
+---
+
 ## [v3.1.0] - 2026-05-13
 
 - (`52ab324`) perf(builder): faster cyclic dependency check (memoized reachability, Set-based DFS); tests for explicit two-node cycle and acyclic dummy graph

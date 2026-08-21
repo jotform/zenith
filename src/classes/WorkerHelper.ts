@@ -1,6 +1,7 @@
 import workerpool from 'workerpool';
 import ConfigHelper from './ConfigHelper';
 import Logger from '../utils/logger';
+import { fromWorkerError } from '../utils/errors';
 import { BuildConfig } from '../types/ConfigTypes';
 import { CacheRecoveryOutput, CommandExecutionOutput } from '../types';
 
@@ -21,37 +22,33 @@ export default class WorkerHelper {
     this.buildConfigJSON = ConfigHelper.buildConfigJSON;
   }
 
-  async execute(buildPath: string, command: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache = false) : Promise<CommandExecutionOutput | Error> {
+  async execute(buildPath: string, command: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache = false) : Promise<CommandExecutionOutput> {
     try {
-      const execution =  await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName, requiredFiles, noCache], {
+      return await this.pool.exec('execute', [buildPath, command, hash, root, outputs, projectName, requiredFiles, noCache], {
         on: message => Logger.log(3, message)
-      }) as CommandExecutionOutput | Error;
-      if (execution instanceof Error) throw new Error('Executing worker failed');
-      return execution;
-
+      }) as CommandExecutionOutput;
     } catch (error) {
-      if (error instanceof Error) throw error;
-      throw new Error('Executing worker failed');
+      throw fromWorkerError(error, { project: projectName, script: command, phase: 'execute' });
     }
   }
 
-  async executeManual({cwd, command, hash}: {cwd: string, command: string, hash: string}): Promise<{[output: string]: string } | Error> {
+  async executeManual({cwd, command, hash}: {cwd: string, command: string, hash: string}): Promise<{[output: string]: string }> {
     try {
-      const execution = await this.pool.exec('manual', [cwd, command, hash], {
+      return await this.pool.exec('manual', [cwd, command, hash], {
         on: message => Logger.log(3, message)
-      }) as {[output: string]: string} | Error;
-      if (execution instanceof Error) throw new Error('Executing worker failed');
-      return execution;
-
+      }) as {[output: string]: string};
     } catch (error) {
-      if (error instanceof Error) throw error;
-      throw new Error('Executing worker failed');
+      throw fromWorkerError(error, { script: command, cwd, phase: 'manual' });
     }
   }
 
   async anotherJob(hash: string, root: string, output: string, target: string, compareHashes: boolean, logAffected: boolean): Promise<CacheRecoveryOutput> {
-    return await this.pool.exec('anotherJob', [hash, root, output, target, compareHashes, logAffected], {
-      on: message => Logger.log(3, message)
+    try {
+      return await this.pool.exec('anotherJob', [hash, root, output, target, compareHashes, logAffected], {
+        on: message => Logger.log(3, message)
       }) as CacheRecoveryOutput;
+    } catch (error) {
+      throw fromWorkerError(error, { project: root, script: target, phase: 'recover' });
+    }
   }
 }

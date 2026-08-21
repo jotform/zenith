@@ -2,19 +2,19 @@ import workerpool from 'workerpool';
 import { execSync } from 'child_process';
 import CacherFactory from './classes/Cache/CacheFactory';
 import { Readable } from 'stream';
-import Logger from './utils/logger';
 import { ROOT_PATH } from './utils/constants';
 import { readableToBuffer } from './utils/functions';
+import { toZenithCommandError } from './utils/errors';
 import { hrtimeToMs } from './utils/time';
 import { metricsCollector } from './metrics/MetricsCollector';
 import { recordOutputStats } from './classes/Cache/metrics/recordOutputStats';
 import { configManagerInstance } from './config';
 import ConfigHelperInstance from './classes/ConfigHelper';
-import { ExecError } from './types/BuildTypes';
 import HybridCacher from './classes/Cache/HybridCacher';
 import { CommandExecutionOutput, CacheRecoveryOutput } from './types';
 
-const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache = false): Promise<CommandExecutionOutput | Error> => {
+const execute = async (buildPath: string, targetCommand: string, hash: string, root: string, outputs: Array<string>, projectName: string, requiredFiles: string[] | undefined, noCache = false): Promise<CommandExecutionOutput> => {
+  const shellCommand = `pnpm --filter ${projectName} ${targetCommand}`;
   try {
     metricsCollector.reset();
     const cacher = CacherFactory.getCacher();
@@ -23,7 +23,7 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     if (project === undefined) throw new Error('Could not read build path in execute method!');
     workerpool.workerEmit(`Running ${targetCommand} command for => ${project}`);
     const executeStart = process.hrtime();
-    const commandOutput = execSync(`pnpm --filter ${projectName} ${targetCommand}`, { cwd: ROOT_PATH, encoding: 'utf-8' });
+    const commandOutput = execSync(shellCommand, { cwd: ROOT_PATH, encoding: 'utf-8' });
     const execTime = process.hrtime(executeStart);
     await recordOutputStats(root, outputs, commandOutput);
     if (noCache) return { output: commandOutput, execTime, metrics: metricsCollector.snapshot() };
@@ -42,13 +42,9 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
     return { output: commandOutput, execTime, cacheTime, metrics: metricsCollector.snapshot() };
   } catch (error) {
     if (ConfigHelperInstance.onFail) ConfigHelperInstance.onFail(targetCommand, { error, hash, root, outputs, projectName, requiredFiles });
-    if (error && typeof error === 'object' && 'stderr' in error) {
-      const execErr = error as ExecError;
-      Logger.log(2, 'ERR-W-E-1 :: output => ', execErr.stdout);
-      throw execErr;
-    }
-    Logger.log(2, 'ERR-W-E-3 :: output => ', error);
-    return new Error(String(error));
+    throw toZenithCommandError(error, {
+      project: projectName, script: targetCommand, command: shellCommand, cwd: ROOT_PATH, phase: 'execute'
+    });
   }
 };
 
@@ -76,20 +72,17 @@ const anotherJob = async (hash: string, root: string, output: string, target: st
     workerpool.workerEmit(outputHash === remoteHash ? `Hash hit for ${root}` : `Hashes mismatched for ${root},  ${outputHash} !== ${remoteHash}`);
     return { result: remoteHash === outputHash, time: process.hrtime(start), metrics: metricsCollector.snapshot() };
   } catch (error) {
-    if (error && typeof error === 'object' && 'stderr' in error) {
-      const execErr = error as ExecError;
-      Logger.log(2, 'ERR-W-A :: output => ', execErr.stderr);
-      throw execErr;
-    }
-    Logger.log(2, 'ERR-W-A :: output => ', error);
-    throw new Error(String(error));
+    throw toZenithCommandError(error, {
+      project: root, script: target, cwd: ROOT_PATH, phase: 'recover'
+    });
   }
 };
 
-const manual = async (cwd: string, command: string, hash: string) => {
+const manual = async (cwd: string, command: string, hash: string): Promise<{ output: string }> => {
+  const shellCommand = `pnpm run ${command}`;
   try {
     const cacher = CacherFactory.getCacher();
-    const output = execSync(`pnpm run ${command}`, { cwd, encoding: 'utf-8'});
+    const output = execSync(shellCommand, { cwd, encoding: 'utf-8'});
     await cacher.cache(hash, 'root', 'stdout', command, output, []);
     await cacher.sendOutputHash(hash, 'root', output, command);
     if (!configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) {
@@ -97,13 +90,9 @@ const manual = async (cwd: string, command: string, hash: string) => {
     }
     return { output };
   } catch (error) {
-    if (error && typeof error === 'object' && 'stderr' in error) {
-      const execErr = error as ExecError;
-      Logger.log(2, 'ERR-W-A :: output => ', execErr.stdout);
-      throw execErr;
-    }
-    Logger.log(2, 'ERR-W-A :: output => ', error);
-    return new Error(String(error));
+    throw toZenithCommandError(error, {
+      script: command, command: shellCommand, cwd, phase: 'manual'
+    });
   }
 };
 
