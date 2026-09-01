@@ -10,6 +10,25 @@ export interface FailureContext {
   phase: FailurePhase;
 }
 
+export type AwsSdkErrorMetadata = {
+  code: string;
+  message: string;
+  key: string;
+  httpStatusCode: number;
+};
+
+export type AwsSdkLikeError = Error & { $metadata: AwsSdkErrorMetadata };
+
+export const createNoSuchKeyError = (metadata: AwsSdkErrorMetadata): AwsSdkLikeError => {
+  const error = new Error(metadata.message) as AwsSdkLikeError;
+  error.$metadata = metadata;
+  return error;
+};
+
+export const toRejectableError = (error: unknown): Error => (
+  error instanceof Error ? error : new Error(String(error))
+);
+
 /**
  * Shape a ZenithCommandError takes after crossing the worker boundary. workerpool
  * copies own enumerable props off the thrown error and rebuilds a plain `Error`
@@ -34,7 +53,11 @@ const toText = (value: unknown): string | undefined => {
   if (value === undefined || value === null) return undefined;
   if (typeof value === 'string') return value || undefined;
   if (Buffer.isBuffer(value)) return value.toString('utf-8') || undefined;
-  return String(value);
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  if (typeof value === 'symbol') return value.toString();
+  return undefined;
 };
 
 /**

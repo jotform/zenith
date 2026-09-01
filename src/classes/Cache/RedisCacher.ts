@@ -4,6 +4,7 @@ import Logger from '../../utils/logger';
 import { DebugJSON } from '../../types/ConfigTypes';
 import { configManagerInstance } from '../../config';
 import { isReadableStreamBody, readableToBuffer } from '../../utils/functions';
+import { createNoSuchKeyError } from '../../utils/errors';
 import Cacher from './Cacher';
 
 class RedisCacher extends Cacher {
@@ -68,7 +69,7 @@ class RedisCacher extends Cacher {
           key: Key,
           httpStatusCode: 404,
         };
-        throw { $metadata: metadata };
+        throw createNoSuchKeyError(metadata);
       }
       if (this.isDebug()) Logger.log(1, 'Retrieved from Redis => ', this.fullKey(Key));
       Logger.log(3, 'Cache successfully retrieved from redis');

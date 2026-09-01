@@ -1,0 +1,27 @@
+# Flags
+optimisticRepeatInstall: true
+strictPeerDependencies: true
+savePrefix: ''
+saveExact: true
+engineStrict: true
+autoInstallPeers: false
+dedupePeers: true
+dedupePeerDependents: false
+pmOnFail: download
+runtimeOnFail: download
+verifyDepsBeforeRun: false
+blockExoticSubdeps: false
+trustLockfile: false
+childConcurrency: 16
+networkConcurrency: 32
+enableGlobalVirtualStore: true
+
+# Minimum release age
+minimumReleaseAge: 10080 # 1 week
+minimumReleaseAgeExclude:
+  - '@jotforminc/*'
+
+# Allow builds for dependencies
+allowBuilds:
+  '@swc/core': true
+  unrs-resolver: true

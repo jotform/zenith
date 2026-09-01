@@ -1,6 +1,6 @@
 {
   "name": "@jotforminc/zenith",
-  "packageManager": "yarn@1.22.21",
+  "packageManager": "pnpm@11.5.0",
   "version": "3.7.0",
   "description": "",
   "main": "./build/index.js",
@@ -18,8 +18,8 @@
     "@types/node": "18.19.130",
     "@types/workerpool": "6.4.0",
     "@types/yauzl": "3.4.0",
-    "@typescript-eslint/eslint-plugin": "5.62.0",
-    "@typescript-eslint/parser": "5.62.0",
+    "@typescript-eslint/eslint-plugin": "8.64.0",
+    "@typescript-eslint/parser": "8.64.0",
     "eslint": "8.57.1",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.27.5",
@@ -33,7 +33,7 @@
   "scripts": {
     "lint": "eslint src/",
     "build": "tsc --build",
-    "pretest": "yarn build",
+    "pretest": "pnpm build",
     "test": "jest --testRegex=\"[^\\.]+\\.spec\\.js$\" --passWithNoTests",
     "tsc:w": "tsc -w",
     "minio:up": "node scripts/minio-up.cjs",
@@ -45,6 +45,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "pnpm": ">=9.7.1"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1058.0",
     "@aws-sdk/lib-storage": "3.1058.0",

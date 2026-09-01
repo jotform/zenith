@@ -11,6 +11,7 @@ import Logger from '../../utils/logger';
 import { DebugJSON } from '../../types/ConfigTypes';
 import { configManagerInstance } from '../../config';
 import { isReadableStreamBody } from '../../utils/functions';
+import { toRejectableError } from '../../utils/errors';
 import Cacher from './Cacher';
 
 const MULTIPART_THRESHOLD_BYTES = 8 * 1024 * 1024;
@@ -101,7 +102,7 @@ class RemoteCacher extends Cacher {
       (err, data) => {
         if (err) {
           Logger.log(2, err);
-          reject(err);
+          reject(toRejectableError(err));
         }
         Logger.log(3, 'Cache successfully retrieved from remote');
         resolve(data?.Body as Readable);

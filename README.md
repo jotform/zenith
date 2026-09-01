@@ -175,7 +175,7 @@ Optional for remote cache when not using default AWS endpoints:
 ```
 
 ### Local S3 with MinIO
-1. Start MinIO and create the `zenith-cache` bucket: `yarn minio:up` (uses local `minio` binary and starts a server on `127.0.0.1:9000`).
+1. Start MinIO and create the `zenith-cache` bucket: `pnpm minio:up` (uses local `minio` binary and starts a server on `127.0.0.1:9000`).
    - If you prefer Docker, use `docker compose -f docker-compose.minio.yml up -d`.
 2. Console UI: http://127.0.0.1:9001 (user `minioadmin`, password `minioadmin` — local dev only).
 3. Point Zenith at MinIO, for example:
@@ -188,14 +188,14 @@ export S3_SECRET_KEY=minioadmin
 export S3_BUCKET_NAME=zenith-cache
 export S3_REGION=us-east-1
 ```
-Stop MinIO: `yarn minio:down`.
+Stop MinIO: `pnpm minio:down`.
 
 If you see `SignatureDoesNotMatch: Invalid argument` against a non-AWS S3 endpoint after upgrading Zenith, ensure you are on a build that sets `requestChecksumCalculation: WHEN_REQUIRED` on the S3 client (3.3.0+), or set `AWS_REQUEST_CHECKSUM_CALCULATION=WHEN_REQUIRED` and `AWS_RESPONSE_CHECKSUM_VALIDATION=WHEN_REQUIRED` in the environment as a workaround.
 
 ### Redis cache
 
 1. Install Redis if needed: `brew install redis`
-2. Start a local server: `yarn redis:up` (uses the `redis-server` binary on `127.0.0.1:6379`).
+2. Start a local server: `pnpm redis:up` (uses the `redis-server` binary on `127.0.0.1:6379`).
    - If you prefer Docker, use `docker run -d --name zenith-redis -p 6379:6379 redis:7-alpine` (requires Docker Desktop to be running).
 3. Point Zenith at Redis:
 
@@ -206,7 +206,7 @@ export REDIS_KEY_PREFIX=zenith:
 pnpm zenith --target=build --project=all
 ```
 
-Stop Redis: `yarn redis:down`.
+Stop Redis: `pnpm redis:down`.
 
 Redis stores cache blobs as binary values keyed by the same paths used for S3/local storage (`zenith:` + `target/layoutHash/projectRoot/...`). Use a dedicated Redis instance or database index in shared environments.
 
@@ -224,7 +224,7 @@ For `remote`, `local-first`, and `remote-first`, set the S3 variables listed abo
 
 ### Cache format benchmark (local MinIO)
 
-After `yarn build` and `yarn minio:up`, with remote S3 env vars set:
+After `pnpm build` and `pnpm minio:up`, with remote S3 env vars set:
 
 `node scripts/benchmark-cache-formats.cjs`
 

@@ -33,7 +33,7 @@ export default class ZipCacheFormat extends AbstractCacheFormat {
     cachePath,
     output,
     outputPath,
-  }: RecoverDirectoryParams): Promise<string | 'Cache not found'> {
+  }: RecoverDirectoryParams): Promise<string> {
     try {
       const response = await this.context.getObject({
         Bucket: this.context.getBucketName(),

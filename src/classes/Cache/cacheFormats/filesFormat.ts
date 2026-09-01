@@ -3,7 +3,7 @@ import { mkdir, rm } from 'fs/promises';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import * as fsp from 'fs/promises';
-import path = require('path');
+import path from 'path';
 import Logger from '../../../utils/logger';
 import AbstractCacheFormat, { CacheDirectoryParams, RecoverDirectoryParams } from './AbstractCacheFormat';
 import { listFilesRecursively } from './directoryStats';
@@ -82,7 +82,7 @@ export default class FilesCacheFormat extends AbstractCacheFormat {
     cachePath,
     output,
     outputPath,
-  }: RecoverDirectoryParams): Promise<string | 'Cache not found'> {
+  }: RecoverDirectoryParams): Promise<string> {
     const manifestKey = `${cachePath}/${output}.manifest.json`;
     const filesPrefix = `${cachePath}/${output}/files`;
     const bucketName = this.context.getBucketName();

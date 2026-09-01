@@ -90,7 +90,7 @@ export default class HybridCacher implements Cacher {
     }
 
     async sendOutputHash(hash: string, root: string, output: string, target: string): Promise<void> {
-        await Promise.all(this.cachers.map(cacher => cacher.sendOutputHash(hash, root, output, target)));
+        await Promise.all(this.cachers.map((cacher) => cacher.sendOutputHash(hash, root, output, target) ?? Promise.resolve()));
     }
 
     callback({
@@ -139,7 +139,7 @@ export default class HybridCacher implements Cacher {
     async pipeEnd(stream: Readable, outputPath: string): Promise<string> {
         try {
             return await this.cachers[0].pipeEnd(stream, outputPath);
-        } catch (error) {
+        } catch {
             return await this.cachers[1].pipeEnd(stream, outputPath);
         }
     }
@@ -147,7 +147,7 @@ export default class HybridCacher implements Cacher {
     async txtPipeEnd(stream: Readable): Promise<string> {
         try {
             return await this.cachers[0].txtPipeEnd(stream);
-        } catch (error) {
+        } catch {
             return await this.cachers[1].txtPipeEnd(stream);
         }
     }
@@ -165,7 +165,7 @@ export default class HybridCacher implements Cacher {
     async checkHashes(hash: string, root: string, output: string, target: string): Promise<Readable | undefined> {
         try {
             return await this.cachers[0].checkHashes(hash, root, output, target);
-        } catch (error) {
+        } catch {
             return await this.cachers[1].checkHashes(hash, root, output, target);
         }
     }

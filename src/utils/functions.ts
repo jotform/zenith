@@ -5,7 +5,7 @@ import { join } from 'path';
 import { Readable } from 'stream';
 
 /** Zip streams (e.g. JSZip generateNodeStream) may not pass `instanceof Readable` in all runtimes. */
-export function isReadableStreamBody(body: string | Buffer | Readable | unknown): body is Readable {
+export function isReadableStreamBody(body: unknown): body is Readable {
   if (body === null || typeof body !== 'object') return false;
   if (Buffer.isBuffer(body)) return false;
   if (typeof body === 'string') return false;

@@ -34,5 +34,5 @@ export default abstract class AbstractCacheFormat {
 
   abstract cacheDirectory(params: CacheDirectoryParams): Promise<void>;
 
-  abstract recoverDirectory(params: RecoverDirectoryParams): Promise<string | 'Cache not found'>;
+  abstract recoverDirectory(params: RecoverDirectoryParams): Promise<string>;
 }

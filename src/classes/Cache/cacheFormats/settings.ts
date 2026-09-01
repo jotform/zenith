@@ -19,7 +19,7 @@ export const getConfiguredCacheFormat = (): ConfiguredCacheFormat => {
     || configured === CACHE_FORMATS.TAR
     || configured === CACHE_FORMATS.BLOBS
   ) {
-    return configured as ConcreteCacheFormat;
+    return configured;
   }
   return CACHE_FORMATS.ZIP;
 };

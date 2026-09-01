@@ -9,6 +9,7 @@ import { DebugJSON } from '../../types/ConfigTypes';
 import { NodeSystemError } from '../../types/BuildTypes';
 import { configManagerInstance } from '../../config';
 import { isReadableStreamBody } from '../../utils/functions';
+import { createNoSuchKeyError, toRejectableError } from '../../utils/errors';
 import Cacher from './Cacher';
 import Hasher from '../Hasher';
 
@@ -63,11 +64,11 @@ class LocalCacher extends Cacher {
             key: Key,
             httpStatusCode: 404
           };
-          reject({ $metadata: metadata });
+          reject(createNoSuchKeyError(metadata));
           return;
         }
         Logger.log(2, error);
-        reject(error);
+        reject(toRejectableError(error));
       }
     });
   }

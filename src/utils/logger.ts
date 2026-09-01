@@ -10,7 +10,7 @@ class Logger {
     this.logLevel = level;
   }
 
-  log(level: number, color?: string | unknown, ...args: Array<unknown>) {
+  log(level: number, color?: unknown, ...args: Array<unknown>) {
     if (this.logLevel < level) return;
     // Callers may skip the color argument and pass a value straight through
     // (e.g. an Error). Treat a non-string first argument as part of the message

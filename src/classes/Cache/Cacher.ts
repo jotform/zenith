@@ -4,7 +4,7 @@ import { Readable } from 'stream';
 import Logger from '../../utils/logger';
 import { configManagerInstance } from '../../config';
 import { metricsCollector } from '../../metrics/MetricsCollector';
-import path = require('path');
+import path from 'path';
 import { ROOT_PATH, RECURSIVE_RM_OPTIONS } from '../../utils/constants';
 import { existsSync } from 'fs';
 import { stat, rm, mkdir } from 'fs/promises';
@@ -137,9 +137,9 @@ export default abstract class Cacher {
       }).then(() => {
         Logger.log(3, 'Txt Cache successfully stored');
         resolve();
-      }).catch((err) => {
+      }).catch((err: unknown) => {
         Logger.log(2, err);
-        reject(err);
+        reject(err instanceof Error ? err : new Error(String(err)));
       });
     });
   }

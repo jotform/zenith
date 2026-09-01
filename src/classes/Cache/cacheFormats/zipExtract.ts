@@ -3,6 +3,7 @@ import { mkdir } from 'fs/promises';
 import { dirname, join } from 'path';
 import { pipeline } from 'stream/promises';
 import yauzl from 'yauzl';
+import { toRejectableError } from '../../../utils/errors';
 
 /**
  * Streaming zip extraction backed by yauzl@3.3.1+.
@@ -36,7 +37,7 @@ export function extractZipFileToDir(zipPath: string, outputPath: string): Promis
         if (settled) return;
         settled = true;
         zipfile.close();
-        reject(failErr);
+        reject(toRejectableError(failErr));
       };
       zipfile.on('error', fail);
       zipfile.on('close', () => resolve());

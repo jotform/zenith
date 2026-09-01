@@ -27,9 +27,9 @@ class UnzippedReader {
                     return data;
                 });
             }
-            return Promise.reject(`File ${_path} not found`);
+            return Promise.reject(new Error(`File ${_path} not found`));
         }
-        return Promise.reject(`File ${_path} not found`);
+        return Promise.reject(new Error(`File ${_path} not found`));
     }
 }
 

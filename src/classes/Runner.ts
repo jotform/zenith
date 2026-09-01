@@ -79,7 +79,7 @@ export default class Runner {
           '--cache-format <format>',
           'Cache storage shape: zip | files | tar | blobs | auto. When passed on the CLI, overrides the default (zip) for this run.'
         )
-          .choices(Object.values(CACHE_FORMATS) as string[])
+          .choices(Object.values(CACHE_FORMATS))
           .default(CACHE_FORMATS.ZIP)
       )
       .addOption(
@@ -87,7 +87,7 @@ export default class Runner {
           '--stats <mode>',
           'End-of-run statistics block, independent of --logLevel: silent (summary only) | default (built projects, no cap) | full (all projects incl. cache hits, no cap).'
         )
-          .choices(Object.values(STATS_MODES) as string[])
+          .choices(Object.values(STATS_MODES))
           .default(STATS_MODES.DEFAULT)
       );
     program.parse(args);

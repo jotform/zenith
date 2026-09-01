@@ -30,7 +30,7 @@ const execute = async (buildPath: string, targetCommand: string, hash: string, r
 
     const cacheStart = process.hrtime();
     await Promise.all(outputs.map(output => cacher.cache(hash, root, output, targetCommand, commandOutput, requiredFiles)));
-    await Promise.all(outputs.map(output => cacher.sendOutputHash(hash, root, output, targetCommand)));
+    await Promise.all(outputs.map((output) => cacher.sendOutputHash(hash, root, output, targetCommand) ?? Promise.resolve()));
     const cacheTime = process.hrtime(cacheStart);
     // Derive archive time from the transfer WALL span, not the sum of upload
     // durations — parallel (multi-file) uploads would otherwise clamp this to 0.

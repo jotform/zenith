@@ -1,5 +1,5 @@
 import * as fsp from 'fs/promises';
-import path = require('path');
+import path from 'path';
 
 export type DirectoryFileStats = {
   fileCount: number;

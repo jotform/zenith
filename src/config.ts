@@ -1,4 +1,4 @@
-enum CACHE_TYPES {
+export enum CACHE_TYPES {
   LOCAL = 'local',
   REMOTE = 'remote',
   REDIS = 'redis',

@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
 import * as path from 'path';
+import { createRequire } from 'module';
 import { ROOT_PATH } from '../utils/constants';
 import {
   ProjectConfig, BuildConfig, TargetObject, ZenithConfigType, PipeConfigArray
@@ -36,10 +37,10 @@ class ConfigHelper {
     // check if config is json or js
     const extension = path.extname(configPath);
     if (extension === '.js') {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const config = (require(configPath)) as ZenithConfigType;
+      const require = createRequire(configPath);
+      const config = require(configPath) as ZenithConfigType;
       return config;
-    } 
+    }
     if (extension === '.json') {
       const config = readFileSync(configPath, { encoding: 'utf-8' });
       return JSON.parse(config) as ZenithConfigType;
