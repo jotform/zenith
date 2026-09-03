@@ -17,6 +17,13 @@ import { BuildParams, PackageJsonType, ProjectRunStats } from '../../types/Build
 import LocalCacher from '../Cache/LocalCacher';
 import RemoteCacher from '../Cache/RemoteCacher';
 import { configManagerInstance } from '../../config';
+import { merkleIndexPathForTarget } from '../Merkle/MerkleIndex';
+import {
+  readZenithSnapshot,
+  workspaceMapToRecord,
+  writeZenithSnapshot,
+} from '../Merkle/snapshot';
+import { MERKLE_DIGEST_VERSION } from '../Merkle/types';
 
 export default class BuildHelper extends WorkerHelper {
   projects : Map<string, Set<string>> = new Map();
@@ -55,6 +62,11 @@ export default class BuildHelper extends WorkerHelper {
 
   noCache = false;
 
+  exportSnapshotPath = '';
+
+  /** Immutable copy of the dependency graph for snapshot export (build mutates `projects`). */
+  snapshotWorkspace: Map<string, Set<string>> = new Map();
+
   cacher: RemoteCacher | LocalCacher;
 
   hasher = new Hasher();
@@ -90,7 +102,7 @@ export default class BuildHelper extends WorkerHelper {
   }
 
   async init({
-    debug, compareWith, compareHash, logAffected, skipDependencies, onlyDependencies, debugLocation, skipPackageJson, singleCache, noCache, project, workspace
+    debug, compareWith, compareHash, logAffected, skipDependencies, onlyDependencies, debugLocation, skipPackageJson, singleCache, noCache, project, workspace, importSnapshotPath, exportSnapshotPath,
   }: BuildParams) : Promise<void> {
     this.compareHash = compareHash;
     this.logAffected = logAffected;
@@ -100,6 +112,7 @@ export default class BuildHelper extends WorkerHelper {
     this.skipPackageJson = skipPackageJson;
     this.singleCache = singleCache;
     this.noCache = noCache;
+    this.exportSnapshotPath = exportSnapshotPath || '';
     this.startTime = process.hrtime();
     this.projectToBuild = project || 'all';
     const constantDependencies = ConfigHelper.getConfig('mainConfig', '')[this.command]?.constantDependencies || [];
@@ -127,6 +140,30 @@ export default class BuildHelper extends WorkerHelper {
       const debugJSON = await this.cacher.getDebugFile(compareWith, this.command, debugLocation) || {};
       this.hasher.updateDebugJSON(debugJSON);
     }
+    if (importSnapshotPath) {
+      const snapshot = readZenithSnapshot(importSnapshotPath);
+      this.hasher.merkleIndex.deserialize(snapshot.merkle);
+    } else {
+      this.hasher.loadMerkleIndex(merkleIndexPathForTarget(this.command));
+    }
+    this.snapshotWorkspace = deepCloneMap(this.projects);
+  }
+
+  persistMerkleIndex(): void {
+    this.hasher.saveMerkleIndex(merkleIndexPathForTarget(this.command));
+  }
+
+  exportSnapshotIfRequested(): void {
+    if (!this.exportSnapshotPath) return;
+    writeZenithSnapshot(this.exportSnapshotPath, {
+      version: MERKLE_DIGEST_VERSION,
+      target: this.command,
+      createdAt: new Date().toISOString(),
+      workspace: workspaceMapToRecord(this.snapshotWorkspace),
+      merkle: this.hasher.merkleIndex.serialize(),
+      projectHashes: { ...this.hasher.hashJSON },
+    });
+    Logger.log(2, this.outputColor, `Zenith snapshot written to ${this.exportSnapshotPath}`);
   }
 
   getProjects(): Map<string, Set<string>> {
@@ -381,6 +418,8 @@ export default class BuildHelper extends WorkerHelper {
           this.cacher.updateDebugFile(this.hasher.getDebugJSON(), this.command, this.debugLocation);
           Logger.log(2, this.outputColor, 'DEBUG JSON UPDATED');
         }
+        this.persistMerkleIndex();
+        this.exportSnapshotIfRequested();
       }
       return;
     }

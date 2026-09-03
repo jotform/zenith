@@ -141,6 +141,44 @@ describe("hasher basic functionality", () => {
     const bigPath = path.join(mocksFolderPath, "large.bin");
     writeFileSync(bigPath, Buffer.alloc(256 * 1024 + 1, 3));
     const hash = await HasherInstance.getHash(mocksFolderPath, "", false, undefined, undefined, []);
-    expect(hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(hash).toMatch(/^m1:[a-f0-9]{64}$/);
+  });
+
+  it("produces stable merkle digests across runs", async () => {
+    writeFileSync(path.join(mocksFolderPath, "a.js"), "const a = 1;");
+    mkdirSync(path.join(mocksFolderPath, "nested"));
+    writeFileSync(path.join(mocksFolderPath, "nested", "b.js"), "const b = 2;");
+    const first = await HasherInstance.getHash(mocksFolderPath, "build", false, undefined, undefined, []);
+    const secondHasher = new Hasher();
+    const second = await secondHasher.getHash(mocksFolderPath, "build", false, undefined, undefined, []);
+    expect(first).toBe(second);
+    expect(first).toMatch(/^m1:[a-f0-9]{64}$/);
+  });
+
+  it("reuses merkle leaf hashes when mtime and size match", async () => {
+    const filePath = path.join(mocksFolderPath, "reuse.js");
+    writeFileSync(filePath, "reuse-me");
+    await HasherInstance.getHash(mocksFolderPath, "", false, undefined, undefined, []);
+    HasherInstance.resetPerfCounters();
+    const warm = await HasherInstance.getHash(mocksFolderPath, "", false, undefined, undefined, []);
+    const perf = HasherInstance.getPerfCounters();
+    expect(warm).toMatch(/^m1:[a-f0-9]{64}$/);
+    expect(perf.filesReused).toBe(1);
+    expect(perf.filesHashed).toBe(0);
+    expect(perf.bytesRead).toBe(0);
+  });
+
+  it("rehashes only changed leaves on content update", async () => {
+    const keepPath = path.join(mocksFolderPath, "keep.js");
+    const changePath = path.join(mocksFolderPath, "change.js");
+    writeFileSync(keepPath, "keep");
+    writeFileSync(changePath, "before");
+    await HasherInstance.getHash(mocksFolderPath, "", false, undefined, undefined, []);
+    writeFileSync(changePath, "after-longer");
+    HasherInstance.resetPerfCounters();
+    await HasherInstance.getHash(mocksFolderPath, "", false, undefined, undefined, []);
+    const perf = HasherInstance.getPerfCounters();
+    expect(perf.filesHashed).toBe(1);
+    expect(perf.filesReused).toBe(1);
   });
 });

@@ -6,6 +6,7 @@ import Logger from '../utils/logger';
 import { deepCloneMap } from '../utils/functions';
 import { CACHE_FORMATS, STATS_MODES, configManagerInstance } from '../config';
 import { PipeConfigArray } from '../types/ConfigTypes';
+import { readZenithSnapshot, workspaceRecordToMap } from './Merkle/snapshot';
 
 export default class Runner {
   project = '';
@@ -38,6 +39,10 @@ export default class Runner {
 
   coloredOutput = true;
 
+  exportSnapshotPath = '';
+
+  importSnapshotPath = '';
+
   static workspace = new Map<string, Set<string>>();
 
   constructor(...args: readonly string[]) {
@@ -56,6 +61,8 @@ export default class Runner {
       .option('-nc, --noCache', 'default: false. If true, will skip the cache and execute the target.')
       .option('-np, --noPipe', 'default: false. If true, will skip the pipe and execute the target.')
       .option('-co, --coloredOutput <color>', 'default: true. If false, will disable colors in the console.', 'true')
+      .option('--export-snapshot <file>', 'After the run, write workspace graph + merkle index to this JSON file')
+      .option('--import-snapshot <file>', 'Load workspace graph + merkle index from a previously exported snapshot')
       .addOption(
         new Option(
           '-l, --logLevel <logLevel>',
@@ -123,7 +130,7 @@ export default class Runner {
       this.singleCache = true;
     }
     if (options.noCache) {
-      configManagerInstance.updateConfig({ 
+      configManagerInstance.updateConfig({
         ZENITH_NO_CACHE: true,
         ZENITH_READ_ONLY: true
       });
@@ -135,6 +142,14 @@ export default class Runner {
     this.worker = options.worker;
     this.pipe = options.noPipe ? [] : ConfigHelperInstance.pipe;
     this.coloredOutput = options.coloredOutput === 'true';
+    if (options.exportSnapshot) {
+      this.exportSnapshotPath = options.exportSnapshot as string;
+    }
+    if (options.importSnapshot) {
+      this.importSnapshotPath = options.importSnapshot as string;
+      const snapshot = readZenithSnapshot(this.importSnapshotPath);
+      Runner.workspace = workspaceRecordToMap(snapshot.workspace);
+    }
 
     configManagerInstance.updateConfig({ ZENITH_STATS_MODE: options.stats as STATS_MODES });
 
@@ -179,6 +194,8 @@ export default class Runner {
       skipPackageJson: this.skipPackageJson,
       singleCache: this.singleCache,
       noCache: configManagerInstance.getConfigValue('ZENITH_NO_CACHE'),
+      importSnapshotPath: this.importSnapshotPath,
+      exportSnapshotPath: this.exportSnapshotPath,
       ...config
     };
     const buildType = buildConfig.singleCache ? 'single' : 'project';

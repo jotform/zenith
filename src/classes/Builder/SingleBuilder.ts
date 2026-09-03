@@ -37,6 +37,8 @@ export default class SingleBuilder extends BuildHelper {
         Logger.log(2, this.outputColor, `Zenith completed command: ${this.command}. ${this.noCache ? '(Cache was not used)' : ''}`);
         Logger.log(2, this.outputColor, `Total of ${this.totalCount} project${this.totalCount === 1 ? ' is' : 's are'} finished.`);
         Logger.log(2, this.outputColor, `Total process took (${formatTimeDiff(process.hrtime(this.startTime))}).`);
+        this.persistMerkleIndex();
+        this.exportSnapshotIfRequested();
         return;
       }
     }

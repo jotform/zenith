@@ -14,6 +14,8 @@ Create a `zenith.json` in your project root including `projects` and `buildConfi
 ## Features
 
 -   **Local & Remote Caching:** Deploy faster using less bandwidth. Supports local disk, S3-compatible remote storage, and Redis.
+-   **Merkle input hashing:** Versioned digests (`m1:…`) with a local `.zenith/merkle/` index so unchanged files are not re-read. Invalidates pre-Merkle cache keys.
+-   **Snapshots:** `--export-snapshot` / `--import-snapshot` share the dependency graph and Merkle index across processes.
 -   **No .git Required:** Ideal for team-based monorepo development.
 -   **Versatile Commands:** Supports `build`, `test`, and more.
 
@@ -268,8 +270,33 @@ The following parameters are not required to work, but can be used to modify the
 
 
 --stats <silent | default | full>: Controls the end-of-run statistics block, independently of --logLevel. `silent` prints only the summary block (no tables). `default` prints both tables limited to projects that were built this run (cache hits excluded), with no row cap. `full` prints both tables for all projects including cache hits, with no row cap. Default: `default`.
+
+
+--export-snapshot <file>: After a successful run, write a JSON snapshot containing the workspace dependency graph, Merkle index, and per-project digests.
+
+
+--import-snapshot <file>: Load workspace graph + Merkle index from a prior `--export-snapshot` file so later processes skip graph discovery and reuse leaf hashes for unchanged files.
 ```
 
+### Merkle index and snapshots
+
+Zenith hashes each package as a **Merkle tree** (file leaves = content SHA-256; directories = hash of sorted child digests). Package cache keys are prefixed with `m1:` so they never collide with pre-Merkle digests.
+
+Between runs on the same machine, Zenith persists the index under `.zenith/merkle/<target>.json` and skips reading files whose `mtime` and `size` still match.
+
+To share that work across processes (CI jobs, parallel pipelines):
+
+```bash
+pnpm zenith --target=build --project=all --export-snapshot=.zenith/snapshot.json
+# later / another job:
+pnpm zenith --target=test --project=all --import-snapshot=.zenith/snapshot.json
+```
+
+`zenith graph -f graph.json` writes the dependency graph JSON and exits (no UI server).
+
+Local Merkle micro-benchmark (after `pnpm build`):
+
+`pnpm bench:merkle`
 
 ## Build statistics output
 

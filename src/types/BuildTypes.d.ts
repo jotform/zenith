@@ -22,6 +22,12 @@ export interface BuildParams {
   noCache: boolean;
   project: string;
   workspace: Map<string, Set<string>>;
+  /** When set, skip graph discovery and use this workspace map. */
+  importedWorkspace?: Map<string, Set<string>>;
+  /** Path to a Zenith snapshot whose merkle index should hydrate the hasher. */
+  importSnapshotPath?: string;
+  /** After the run, write workspace + merkle (+ project hashes) here. */
+  exportSnapshotPath?: string;
 }
 
 export interface PackageJsonType {

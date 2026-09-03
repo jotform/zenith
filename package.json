@@ -40,7 +40,8 @@
     "minio:down": "node scripts/minio-down.cjs",
     "redis:up": "node scripts/redis-up.cjs",
     "redis:down": "node scripts/redis-down.cjs",
-    "bench:cache-formats": "node scripts/benchmark-cache-formats.cjs"
+    "bench:cache-formats": "node scripts/benchmark-cache-formats.cjs",
+    "bench:merkle": "node scripts/benchmark-merkle.cjs"
   },
   "keywords": [],
   "author": "",
