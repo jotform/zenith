@@ -12,6 +12,7 @@ import { DebugJSON } from '../../types/ConfigTypes';
 import { configManagerInstance } from '../../config';
 import { isReadableStreamBody } from '../../utils/functions';
 import { toRejectableError } from '../../utils/errors';
+import { withRateLimitRetry } from '../../utils/rateLimitRetry';
 import Cacher from './Cacher';
 
 const MULTIPART_THRESHOLD_BYTES = 8 * 1024 * 1024;
@@ -47,45 +48,54 @@ class RemoteCacher extends Cacher {
         const tmp = join(tmpdir(), `zenith-upload-${randomBytes(16).toString('hex')}.bin`);
         await pipeline(Body, createWriteStream(tmp));
         const st = await stat(tmp);
-        const rs = createReadStream(tmp);
         const partSize = Math.min(8 * 1024 * 1024, Math.max(MULTIPART_THRESHOLD_BYTES, 5 * 1024 * 1024));
         try {
           // Multipart: do not pass ContentLength with a file stream — some S3-compatible
           // servers (e.g. MinIO) may complete with "at least one part" errors. Require size
           // strictly greater than one part so the uploader always emits multiple part requests
           // when using multipart (more reliable across backends).
-          if (st.size > partSize) {
-            const upload = new Upload({
-              client: this.s3Client,
-              params: {
-                Bucket: buck,
-                Key,
-                Body: rs,
-              },
-              partSize,
-              queueSize: 4,
-            });
-            await upload.done();
-          } else {
-            await this.s3Client.putObject({
-              Bucket: buck,
-              Key,
-              Body: rs,
-              ContentLength: st.size,
-            });
-          }
+          // Recreate the read stream on each attempt so 429 retries can re-upload.
+          await withRateLimitRetry(async () => {
+            const rs = createReadStream(tmp);
+            try {
+              if (st.size > partSize) {
+                const upload = new Upload({
+                  client: this.s3Client,
+                  params: {
+                    Bucket: buck,
+                    Key,
+                    Body: rs,
+                  },
+                  partSize,
+                  queueSize: 4,
+                });
+                await upload.done();
+              } else {
+                await this.s3Client.putObject({
+                  Bucket: buck,
+                  Key,
+                  Body: rs,
+                  ContentLength: st.size,
+                });
+              }
+            } finally {
+              rs.destroy();
+            }
+          }, { label: `putObject ${Key}` });
         } finally {
-          rs.destroy();
           await unlink(tmp).catch(() => undefined);
         }
         Logger.log(3, 'Cache successfully stored to remote');
         return;
       }
-      await this.s3Client.putObject({
-        Bucket: buck,
-        Key,
-        Body,
-      });
+      await withRateLimitRetry(
+        () => this.s3Client.putObject({
+          Bucket: buck,
+          Key,
+          Body,
+        }).then(() => undefined),
+        { label: `putObject ${Key}` },
+      );
       Logger.log(3, 'Cache successfully stored to remote');
     })().catch((err) => {
       Logger.log(2, err);
@@ -93,31 +103,34 @@ class RemoteCacher extends Cacher {
     });
   }
 
-  getObject({ Bucket, Key }: { Bucket?: string | undefined, Key: string }): Promise<Readable> {
-    return new Promise((resolve, reject) => {
-      this.s3Client.getObject({
-        Bucket: Bucket || configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-        Key
-      },
-      (err, data) => {
-        if (err) {
-          Logger.log(2, err);
-          reject(toRejectableError(err));
-        }
-        Logger.log(3, 'Cache successfully retrieved from remote');
-        resolve(data?.Body as Readable);
-      });
-    });
+  async getObject({ Bucket, Key }: { Bucket?: string | undefined, Key: string }): Promise<Readable> {
+    try {
+      const data = await withRateLimitRetry(
+        () => this.s3Client.getObject({
+          Bucket: Bucket || configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+          Key,
+        }),
+        { label: `getObject ${Key}` },
+      );
+      Logger.log(3, 'Cache successfully retrieved from remote');
+      return data.Body as Readable;
+    } catch (err) {
+      Logger.log(2, err);
+      throw toRejectableError(err);
+    }
   }
 
   async getDebugFile(compareWith: string, target: string, debugLocation: string): Promise<Record<string, string>>{
     if (compareWith) {
       const debugFilePath = `${target}/${debugLocation}debug.${compareWith}.json`;
       try {
-        const response = await this.s3Client.getObject({
-          Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-          Key: debugFilePath
-        });
+        const response = await withRateLimitRetry(
+          () => this.s3Client.getObject({
+            Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
+            Key: debugFilePath,
+          }),
+          { label: `getDebugFile ${debugFilePath}` },
+        );
         if (response.Body === undefined) throw Error('debug JSON was undefined');
         const debugFileString = await response.Body.transformToString();
         return JSON.parse(debugFileString) as Record<string, string>;
@@ -132,19 +145,19 @@ class RemoteCacher extends Cacher {
   updateDebugFile(debugJSON: DebugJSON, target: string, debugLocation: string) {
     if (configManagerInstance.getConfigValue('ZENITH_READ_ONLY')) return;
     const debugBuff = Buffer.from(JSON.stringify(debugJSON));
-    this.s3Client.putObject(
-      {
+    const key = `${target}/${debugLocation}debug.${configManagerInstance.getConfigValue('ZENITH_DEBUG_ID')}.json`;
+    void withRateLimitRetry(
+      () => this.s3Client.putObject({
         Bucket: configManagerInstance.getConfigValue('S3_BUCKET_NAME'),
-        Key: `${target}/${debugLocation}debug.${configManagerInstance.getConfigValue('ZENITH_DEBUG_ID')}.json`,
-        Body: debugBuff
-      },
-      err => {
-        if (err) {
-          Logger.log(2, err);
-        }
-        Logger.log(3, 'Cache successfully stored');
-      }
-    );
+        Key: key,
+        Body: debugBuff,
+      }).then(() => undefined),
+      { label: `updateDebugFile ${key}` },
+    ).then(() => {
+      Logger.log(3, 'Cache successfully stored');
+    }).catch(err => {
+      Logger.log(2, err);
+    });
   }
 }
 
