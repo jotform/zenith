@@ -11,6 +11,12 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 
 ---
 
+## [v3.8.0] - 2026-09-18
+
+- fix: after a target failure the CLI could hang while sibling workers were still blocked in `execSync` — `await shutdown()` / soft `process.exitCode` kept the event loop alive. The run still prints the structured `ZenithCommandError` first (project, command, stdout/stderr), then hard-exits without awaiting pool terminate.
+
+---
+
 ## [v3.7.1] - 2026-09-17
 
 - feat(cache): retry remote S3/GCS put/get on HTTP 429 and SlowDown with exponential backoff (honors `Retry-After`); tunable via `S3_RETRY_MAX_ATTEMPTS`, `S3_RETRY_BASE_DELAY_MS`, `S3_RETRY_MAX_DELAY_MS`
