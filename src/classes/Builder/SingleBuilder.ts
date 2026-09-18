@@ -1,7 +1,7 @@
 import Logger from '../../utils/logger';
 import BuildHelper from "./BuildHelper";
 import { formatTimeDiff } from '../../utils/functions';
-import { formatFailureBlock } from '../../utils/errors';
+import { toZenithCommandError } from '../../utils/errors';
 
 export default class SingleBuilder extends BuildHelper {
 
@@ -24,10 +24,7 @@ export default class SingleBuilder extends BuildHelper {
     try {
       await this.fetchOrRun(hash);
     } catch (err) {
-      await this.shutdown();
-      // eslint-disable-next-line no-console
-      console.error(formatFailureBlock(err));
-      process.exit(1);
+      this.failFast(toZenithCommandError(err, { script: this.command, phase: 'manual' }));
     }
     // eslint-disable-next-line no-constant-condition
     while (true) {

@@ -12,7 +12,7 @@ import { buildTimeTable, buildSizeTable } from '../../stats/statsTables';
 import { buildStatsSummary, statsRenderPlan } from '../../stats/statsSummary';
 import StatsAggregator from '../../stats/StatsAggregator';
 import Logger from '../../utils/logger';
-import { ZenithCommandError, toZenithCommandError } from '../../utils/errors';
+import { ZenithCommandError, formatFailureBlock, toZenithCommandError } from '../../utils/errors';
 import { BuildParams, PackageJsonType, ProjectRunStats } from '../../types/BuildTypes';
 import LocalCacher from '../Cache/LocalCacher';
 import RemoteCacher from '../Cache/RemoteCacher';
@@ -32,6 +32,12 @@ export default class BuildHelper extends WorkerHelper {
   get projectStats(): Map<string, ProjectRunStats> {
     return this.stats.projectStats;
   }
+
+  /**
+   * True while the CLI is exiting after the first real failure. Sibling catch
+   * paths park instead of printing a second failure block.
+   */
+  static exiting = false;
 
   compareHash = true;
 
@@ -87,6 +93,23 @@ export default class BuildHelper extends WorkerHelper {
     // workerpool returns its own thenable, so adapt it to a native promise.
     if (!this.shutdownPromise) this.shutdownPromise = Promise.resolve(this.pool.terminate(false)).then(() => undefined);
     return this.shutdownPromise;
+  }
+
+  /**
+   * Print the structured failure and exit without awaiting pool shutdown.
+   * Workers blocked in `execSync` keep `terminate()` pending until their child
+   * exits, so awaiting shutdown (or relying on `process.exitCode`) leaves the
+   * CLI hung after the real error was already known. #87's error reporting is
+   * preserved: we emit `ZenithCommandError` first, never termination noise.
+   */
+  failFast(failure: ZenithCommandError): never {
+    if (!BuildHelper.exiting) {
+      BuildHelper.exiting = true;
+      // eslint-disable-next-line no-console
+      console.error(formatFailureBlock(failure));
+      void this.shutdown().catch(() => undefined);
+    }
+    process.exit(1);
   }
 
   async init({
@@ -328,8 +351,12 @@ export default class BuildHelper extends WorkerHelper {
       Logger.log(3, this.outputColor, 'ERR-B1 :: project: ', buildProject, ' error: ', failure.message);
       if (!this.failure) this.failure = failure;
       this.aborted = true;
-      await this.shutdown();
-      throw failure;
+      // Another project already owns the exit — park until process.exit runs.
+      if (BuildHelper.exiting) {
+        await new Promise(() => undefined);
+        return;
+      }
+      this.failFast(failure);
     }
   }
 
