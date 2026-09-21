@@ -4,7 +4,7 @@ import Logger from '../../utils/logger';
 import { DebugJSON } from '../../types/ConfigTypes';
 import { configManagerInstance } from '../../config';
 import { isReadableStreamBody, readableToBuffer } from '../../utils/functions';
-import { createNoSuchKeyError } from '../../utils/errors';
+import { createNoSuchKeyError, isCacheMissError } from '../../utils/errors';
 import Cacher from './Cacher';
 
 class RedisCacher extends Cacher {
@@ -75,7 +75,7 @@ class RedisCacher extends Cacher {
       Logger.log(3, 'Cache successfully retrieved from redis');
       return Readable.from(data);
     })().catch((err) => {
-      if ((err as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode === 404) {
+      if (isCacheMissError(err)) {
         throw err;
       }
       Logger.log(2, err);
@@ -91,7 +91,7 @@ class RedisCacher extends Cacher {
       const debugFileString = await this.txtPipeEnd(response);
       return JSON.parse(debugFileString) as Record<string, string>;
     } catch (error) {
-      Logger.log(2, error);
+      if (!isCacheMissError(error)) Logger.log(2, error);
       return {};
     }
   }

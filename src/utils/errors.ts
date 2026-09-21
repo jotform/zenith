@@ -21,8 +21,22 @@ export type AwsSdkLikeError = Error & { $metadata: AwsSdkErrorMetadata };
 
 export const createNoSuchKeyError = (metadata: AwsSdkErrorMetadata): AwsSdkLikeError => {
   const error = new Error(metadata.message) as AwsSdkLikeError;
+  error.name = 'NoSuchKey';
   error.$metadata = metadata;
   return error;
+};
+
+/** Expected cache miss (S3/local/Redis). Callers treat this as "not found", not a hard failure. */
+export const isCacheMissError = (error: unknown): boolean => {
+  if (error == null || typeof error !== 'object') return false;
+  const err = error as Record<string, unknown>;
+  const metadata = err.$metadata as Record<string, unknown> | undefined;
+  if (metadata?.httpStatusCode === 404) return true;
+  if (metadata?.code === 'NoSuchKey') return true;
+  for (const key of ['name', 'code', 'Code'] as const) {
+    if (err[key] === 'NoSuchKey') return true;
+  }
+  return false;
 };
 
 export const toRejectableError = (error: unknown): Error => (

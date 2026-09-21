@@ -11,6 +11,12 @@ The format is inspired by [Keep a Changelog](https://keepachangelog.com/en/1.1.0
 
 ---
 
+## [v3.8.1] - 2026-09-21
+
+- fix: expected S3/Redis cache misses (`NoSuchKey` / HTTP 404) no longer spam default logs during multi-format probes and hash checks. Unexpected remote errors still log at level 2; misses are only visible with `--logLevel 3`. Real target failures keep the structured `Zenith failed` block.
+
+---
+
 ## [v3.8.0] - 2026-09-18
 
 - fix: after a target failure the CLI could hang while sibling workers were still blocked in `execSync` — `await shutdown()` / soft `process.exitCode` kept the event loop alive. The run still prints the structured `ZenithCommandError` first (project, command, stdout/stderr), then hard-exits without awaiting pool terminate.
