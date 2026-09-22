@@ -11,6 +11,7 @@ import { stat, rm, mkdir } from 'fs/promises';
 import { getMissingRequiredFiles, isOutputTxt } from '../../utils/functions';
 import Hasher from './../Hasher';
 import { NodeSystemError } from '../../types/BuildTypes';
+import { isCacheMissError } from '../../utils/errors';
 import FilesCacheFormat from './cacheFormats/filesFormat';
 import BlobsCacheFormat from './cacheFormats/blobsFormat';
 import TarCacheFormat from './cacheFormats/tarFormat';
@@ -259,8 +260,7 @@ export default abstract class Cacher {
       }
       return 'Cache not found';
     } catch (error) {
-      const status = (error as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
-      if (status === 404) {
+      if (isCacheMissError(error)) {
         return 'Cache not found';
       }
       Logger.log(2, "ERR-C-R ::", error);
@@ -279,7 +279,7 @@ export default abstract class Cacher {
         if (response === undefined) throw new Error('Error while checking hashes: S3 Response Body is undefined');
         return response;
       } catch (error) {
-        Logger.log(2, error);
+        if (!isCacheMissError(error)) Logger.log(2, error);
         return undefined;
       }
     }
@@ -293,7 +293,7 @@ export default abstract class Cacher {
         if (response === undefined) throw new Error('Error while checking hashes: S3 Response Body is undefined');
         return response;
       } catch (error) {
-        Logger.log(2, error);
+        if (!isCacheMissError(error)) Logger.log(2, error);
       }
     }
     try {
@@ -304,7 +304,7 @@ export default abstract class Cacher {
       if (response === undefined) throw new Error('Error while checking hashes: S3 Response Body is undefined');
       return response;
     } catch (error) {
-      Logger.log(2, error);
+      if (!isCacheMissError(error)) Logger.log(2, error);
     }
     return undefined;
   }

@@ -11,7 +11,7 @@ import Logger from '../../utils/logger';
 import { DebugJSON } from '../../types/ConfigTypes';
 import { configManagerInstance } from '../../config';
 import { isReadableStreamBody } from '../../utils/functions';
-import { toRejectableError } from '../../utils/errors';
+import { isCacheMissError, toRejectableError } from '../../utils/errors';
 import { withRateLimitRetry } from '../../utils/rateLimitRetry';
 import Cacher from './Cacher';
 
@@ -115,7 +115,9 @@ class RemoteCacher extends Cacher {
       Logger.log(3, 'Cache successfully retrieved from remote');
       return data.Body as Readable;
     } catch (err) {
-      Logger.log(2, err);
+      // Cache misses are expected during probes; only unexpected S3 errors are level-2.
+      if (!isCacheMissError(err)) Logger.log(2, err);
+      else Logger.log(3, err);
       throw toRejectableError(err);
     }
   }
@@ -135,7 +137,8 @@ class RemoteCacher extends Cacher {
         const debugFileString = await response.Body.transformToString();
         return JSON.parse(debugFileString) as Record<string, string>;
       } catch (error) {
-        Logger.log(2, error);
+        if (!isCacheMissError(error)) Logger.log(2, error);
+        else Logger.log(3, error);
         return {};
       }
     }
